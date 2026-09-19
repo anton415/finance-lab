@@ -55,7 +55,7 @@ jobs:
           PRS_DIRECTORY: ${{ runner.temp }}/prs
         run: |
           git fetch origin metrics || true
-          if git show-ref --verify --quiet refs/remotes/origin/metrics; then git switch --detach origin/metrics; else git switch --orphan metrics; git rm -rf .; fi
+          if git show-ref --verify --quiet refs/remotes/origin/metrics; then git switch --detach origin/metrics; else git switch --orphan metrics; fi
           for observation in "$PRS_DIRECTORY"/*.json; do
             pr_number=$(basename "$observation" .json)
             mkdir -p "data/prs/$pr_number"
