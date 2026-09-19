@@ -4,7 +4,7 @@
   "prs": [
     {
       "pr_number": 9,
-      "cycle_time_hours": "unknown",
+      "cycle_time_hours": 0.43777777777777777,
       "commits": 1,
       "additions": 1,
       "deletions": 1,
