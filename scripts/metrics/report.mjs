@@ -1,5 +1,13 @@
 export function buildReport(observations) {
-  const prs = observations
+  const latestByPr = new Map()
+  for (const observation of observations) {
+    const current = latestByPr.get(observation.pr.number)
+    if (!current || observation.collected_at > current.collected_at) {
+      latestByPr.set(observation.pr.number, observation)
+    }
+  }
+
+  const prs = [...latestByPr.values()]
     .map((observation) => {
       const runs = observation.ci_runs ?? []
       const completed = runs.filter((run) => run.status === 'completed')

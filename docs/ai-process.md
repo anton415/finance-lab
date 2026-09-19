@@ -2,7 +2,7 @@
 
 The `Collect PR observations` workflow writes append-only raw JSON snapshots to the separate `metrics` branch at `data/prs/<number>/<run-id>-<attempt>.json`. No generated observations or reports belong on `main`.
 
-Each observation contains a PR's timestamps, commit count, additions, deletions, changed-file count, review states, and CI workflow-run attempts. `data/report.json` is regenerated deterministically from all raw observations by `scripts/metrics/report.mjs`; it provides cycle time, commits per PR, change size, CI attempts/failures, and observed `CHANGES_REQUESTED` reviews. The report includes one row per captured observation, ordered by PR number.
+Each observation contains a PR's timestamps, commit count, additions, deletions, changed-file count, review states, and CI workflow-run attempts. `data/report.json` is regenerated deterministically from all raw observations by `scripts/metrics/report.mjs`; it selects the latest `collected_at` snapshot for each PR before calculating cycle time, commits per PR, change size, CI attempts/failures, and observed `CHANGES_REQUESTED` reviews. The report includes one row per PR, ordered by PR number.
 
 CI writes an artifact and job-summary record with the tested SHA, GitHub Actions run ID, attempt, and run URL.
 
