@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "generated_from": "data/prs/*.json",
+  "prs": [
+    {
+      "pr_number": 9,
+      "cycle_time_hours": "unknown",
+      "commits": 1,
+      "additions": 1,
+      "deletions": 1,
+      "changed_files": 1,
+      "ci_attempts": 1,
+      "ci_failures": 0,
+      "review_correction_rounds": 0,
+      "first_pass_success": "unknown"
+    }
+  ]
+}
