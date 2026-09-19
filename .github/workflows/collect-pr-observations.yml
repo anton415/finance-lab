@@ -1,0 +1,69 @@
+name: Collect PR observations
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      prs:
+        description: Comma-separated PR numbers to collect
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: metrics-branch
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Select pull request
+        id: prs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+          WORKFLOW_RUN_PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          DISPATCH_PRS: ${{ inputs.prs }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request_target" ]; then echo "value=$EVENT_PR" >> "$GITHUB_OUTPUT";
+          elif [ "$EVENT_NAME" = "workflow_run" ]; then echo "value=$WORKFLOW_RUN_PR" >> "$GITHUB_OUTPUT";
+          else echo "value=$DISPATCH_PRS" >> "$GITHUB_OUTPUT"; fi
+      - name: Collect raw observations
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/metrics/collect.mjs "$RUNNER_TEMP/prs" "${{ github.repository }}" "${{ steps.prs.outputs.value }}"
+          cp scripts/metrics/report.mjs "$RUNNER_TEMP/report.mjs"
+      - name: Publish to metrics branch
+        env:
+          PRS_DIRECTORY: ${{ runner.temp }}/prs
+        run: |
+          git fetch origin metrics || true
+          if git show-ref --verify --quiet refs/remotes/origin/metrics; then git switch --detach origin/metrics; else git switch --orphan metrics; git rm -rf .; fi
+          for observation in "$PRS_DIRECTORY"/*.json; do
+            pr_number=$(basename "$observation" .json)
+            mkdir -p "data/prs/$pr_number"
+            cp "$observation" "data/prs/$pr_number/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          done
+          node "$RUNNER_TEMP/report.mjs" data/prs data/report.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data
+          git diff --cached --quiet || git commit -m "Record PR observations"
+          git push origin HEAD:metrics
