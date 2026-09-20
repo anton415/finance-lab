@@ -103,15 +103,21 @@ function App() {
       <dl className="totals">
         <div>
           <dt>Total income</dt>
-          <dd>{formatAmount(totalIncome)}</dd>
+          <dd>
+            <output aria-label="Total income">{formatAmount(totalIncome)}</output>
+          </dd>
         </div>
         <div>
           <dt>Total spending</dt>
-          <dd>{formatAmount(totalSpending)}</dd>
+          <dd>
+            <output aria-label="Total spending">{formatAmount(totalSpending)}</output>
+          </dd>
         </div>
         <div>
           <dt>Balance</dt>
-          <dd>{formatAmount(totalIncome - totalSpending)}</dd>
+          <dd>
+            <output aria-label="Balance">{formatAmount(totalIncome - totalSpending)}</output>
+          </dd>
         </div>
       </dl>
     </main>

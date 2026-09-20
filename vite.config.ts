@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     coverage: {
-      reporter: ['text', 'json-summary'],
+      reporter: ['text', 'json-summary', 'lcov'],
     },
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
