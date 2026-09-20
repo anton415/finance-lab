@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "record_kind": "github_pr_ci_observation",
+  "collected_at": "2026-09-20T17:11:51.283Z",
+  "collector_run": {
+    "id": "35525083201",
+    "attempt": "1",
+    "sha": "e3d14758f95f2a154304c493de6be3fa298622fe"
+  },
+  "pr": {
+    "number": 23,
+    "state": "closed",
+    "draft": false,
+    "created_at": "2026-09-20T16:42:21Z",
+    "updated_at": "2026-09-20T17:11:44Z",
+    "closed_at": "2026-09-20T17:11:43Z",
+    "merged_at": "2026-09-20T17:11:43Z",
+    "head_sha": "3978a7ad81f891efa03ec20a1479cda0b19b6e61",
+    "base_sha": "da349d87f8aa886d5e3d83a09f34d1c0c74acc25",
+    "commits": 1,
+    "additions": 2,
+    "deletions": 0,
+    "changed_files": 1
+  },
+  "reviews": [],
+  "ci_runs": [
+    {
+      "id": 35523553350,
+      "name": "CI",
+      "event": "pull_request",
+      "head_sha": "3978a7ad81f891efa03ec20a1479cda0b19b6e61",
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-09-20T16:42:23Z",
+      "updated_at": "2026-09-20T16:42:51Z",
+      "html_url": "https://github.com/anton415/finance-lab/actions/runs/35523553350"
+    }
+  ]
+}
