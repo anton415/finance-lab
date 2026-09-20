@@ -19,6 +19,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm test
+      - run: npm run test:coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
       - run: npm run test:metrics
       - run: npm run build
       - name: Write CI evidence
