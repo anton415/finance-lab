@@ -5,9 +5,85 @@
 }
 
 body {
-  display: grid;
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  place-items: center;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.budget {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th,
+td {
+  border: 1px solid #d1d5db;
+  padding: 0;
+}
+
+th {
+  padding: 0.75rem;
+  text-align: left;
+  background: #f3f4f6;
+}
+
+th:not(:first-child) {
+  text-align: right;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  padding: 0.65rem;
+  background: transparent;
+}
+
+input:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+td:not(:first-child) input {
+  text-align: right;
+}
+
+.totals {
+  display: grid;
+  justify-content: end;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
+}
+
+.totals div {
+  display: grid;
+  grid-template-columns: 10rem minmax(5rem, auto);
+  gap: 1rem;
+}
+
+dt,
+dd {
+  margin: 0;
+}
+
+dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
