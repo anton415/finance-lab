@@ -14,6 +14,7 @@ on:
         type: string
 
 permissions:
+  # This privileged workflow only reads PR metadata and writes the metrics branch.
   contents: write
   pull-requests: read
   actions: read
@@ -29,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Do not check out the PR head: this workflow has a write-capable token.
           ref: main
       - uses: actions/setup-node@v4
         with:
@@ -48,6 +50,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          # Both scripts come from the trusted main checkout above.
           node scripts/metrics/collect.mjs "$RUNNER_TEMP/prs" "${{ github.repository }}" "${{ steps.prs.outputs.value }}"
           cp scripts/metrics/report.mjs "$RUNNER_TEMP/report.mjs"
       - name: Publish to metrics branch

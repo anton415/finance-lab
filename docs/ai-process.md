@@ -15,3 +15,11 @@ CI writes an artifact and job-summary record with the tested SHA, GitHub Actions
 - Records intentionally contain no prompts, conversation text, token/cost data, or inference about whether a human or AI authored a change.
 
 The collector and report transformations are covered by Node tests in `scripts/metrics`.
+
+## Privileged PR observation trigger
+
+`Collect PR observations` intentionally uses `pull_request_target` for PR lifecycle events. A `pull_request` workflow from a fork receives a read-only token and therefore cannot publish the append-only snapshots to the `metrics` branch. The collector needs that write permission; the separate `workflow_run` trigger records completed CI runs, and manual dispatch supports backfills.
+
+This is safe only because the workflow checks out `main`, and executes the collector and report scripts from that trusted checkout. It must never check out, fetch, build, test, install, or execute PR-head code, nor download and execute artifacts from PR workflows. PR numbers and GitHub API responses are treated only as data.
+
+Before November 2, 2026, a repository administrator must create an active repository Actions policy scoped to `.github/workflows/collect-pr-observations.yml` with a `restrict_action_events` rule that allows exactly `pull_request_target`, `workflow_run`, and `workflow_dispatch`. This explicit allowlist keeps the collector running after GitHub enforces the public-repository default that blocks `pull_request_target`; it should be removed if the collector is redesigned so that it no longer needs a write-capable PR-event workflow. Verify the policy in **Settings → Actions → Policies** and use policy insights before changing the workflow's trust boundary.
