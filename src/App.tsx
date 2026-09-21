@@ -1,13 +1,5 @@
-import { useState } from 'react'
-
-type BudgetRow = {
-  item: string
-  income: string
-  spending: string
-}
-
-const emptyRows = (): BudgetRow[] =>
-  Array.from({ length: 10 }, () => ({ item: '', income: '', spending: '' }))
+import { useEffect, useState } from 'react'
+import { loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -20,7 +12,11 @@ const formatAmount = (value: number) =>
   value.toLocaleString(undefined, { maximumFractionDigits: 2 })
 
 function App() {
-  const [rows, setRows] = useState<BudgetRow[]>(emptyRows)
+  const [rows, setRows] = useState<BudgetRow[]>(loadBudget)
+
+  useEffect(() => {
+    saveBudget(rows)
+  }, [rows])
   const totalIncome = rows.reduce((total, row) => total + amount(row.income), 0)
   const totalSpending = rows.reduce(
     (total, row) => total + amount(row.spending),

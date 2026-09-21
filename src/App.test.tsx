@@ -1,9 +1,13 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import App from './App'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+  vi.useRealTimers()
+})
 
 const renderBudget = () => {
   const user = userEvent.setup()
@@ -66,4 +70,50 @@ test('sums income and spending across multiple rows', async () => {
   expect(total('Total income').textContent).toBe('100')
   expect(total('Total spending').textContent).toBe('25')
   expect(total('Balance').textContent).toBe('75')
+})
+
+test('restores the current month budget after remounting', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 8, 21))
+  render(<App />)
+
+  fireEvent.change(screen.getByLabelText('Item, row 1'), {
+    target: { value: 'Sample salary' },
+  })
+  fireEvent.change(screen.getByLabelText('Income, row 1'), {
+    target: { value: '100' },
+  })
+
+  cleanup()
+  render(<App />)
+
+  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', 'Sample salary')
+  expect(screen.getByLabelText('Income, row 1')).toHaveProperty('value', '100')
+  expect(total('Total income').textContent).toBe('100')
+})
+
+test('does not load a budget from another month', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 7, 21))
+  localStorage.setItem(
+    'finance-lab:budget:2026-08',
+    JSON.stringify([{ item: 'Prior month', income: '100', spending: '' }]),
+  )
+  vi.setSystemTime(new Date(2026, 8, 21))
+
+  render(<App />)
+
+  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', '')
+  expect(screen.getAllByRole('textbox', { name: /item, row/i })).toHaveLength(10)
+})
+
+test('falls back to empty rows when saved data is malformed', () => {
+  localStorage.setItem('finance-lab:budget:2026-09', '{invalid')
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 8, 21))
+
+  render(<App />)
+
+  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', '')
+  expect(screen.getAllByRole('textbox', { name: /item, row/i })).toHaveLength(10)
 })
