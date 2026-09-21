@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
+import {
+  currentMonthKey,
+  loadBudget,
+  saveBudget,
+  type BudgetRow,
+} from './budgetStorage'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -12,11 +17,15 @@ const formatAmount = (value: number) =>
   value.toLocaleString(undefined, { maximumFractionDigits: 2 })
 
 function App() {
-  const [rows, setRows] = useState<BudgetRow[]>(loadBudget)
+  const [budget, setBudget] = useState(() => {
+    const key = currentMonthKey()
+    return { key, rows: loadBudget(key) }
+  })
+  const { rows } = budget
 
   useEffect(() => {
-    saveBudget(rows)
-  }, [rows])
+    saveBudget(budget.rows, budget.key)
+  }, [budget])
   const totalIncome = rows.reduce((total, row) => total + amount(row.income), 0)
   const totalSpending = rows.reduce(
     (total, row) => total + amount(row.spending),
@@ -28,8 +37,14 @@ function App() {
       return
     }
 
-    setRows((currentRows) =>
-      currentRows.map((row, rowIndex) => {
+    setBudget((currentBudget) => {
+      const key = currentMonthKey()
+      const rows =
+        key === currentBudget.key ? currentBudget.rows : loadBudget(key)
+
+      return {
+        key,
+        rows: rows.map((row, rowIndex) => {
         if (rowIndex !== index) {
           return row
         }
@@ -43,8 +58,9 @@ function App() {
         }
 
         return { ...row, item: value }
-      }),
-    )
+        }),
+      }
+    })
   }
 
   return (

@@ -17,6 +17,11 @@ const renderBudget = () => {
 
 const total = (label: string) => screen.getByLabelText(label)
 
+const budgetRows = (firstItem: string) => [
+  { item: firstItem, income: '', spending: '' },
+  ...Array.from({ length: 9 }, () => ({ item: '', income: '', spending: '' })),
+]
+
 test('provides ten editable budget rows', () => {
   renderBudget()
 
@@ -116,4 +121,31 @@ test('falls back to empty rows when saved data is malformed', () => {
 
   expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', '')
   expect(screen.getAllByRole('textbox', { name: /item, row/i })).toHaveLength(10)
+})
+
+test('loads the new month before saving an edit after a month rollover', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 8, 30))
+  localStorage.setItem(
+    'finance-lab:budget:2026-09',
+    JSON.stringify(budgetRows('September item')),
+  )
+  localStorage.setItem(
+    'finance-lab:budget:2026-10',
+    JSON.stringify(budgetRows('October item')),
+  )
+  render(<App />)
+
+  vi.setSystemTime(new Date(2026, 9, 1))
+  fireEvent.change(screen.getByLabelText('Item, row 2'), {
+    target: { value: 'October edit' },
+  })
+
+  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', 'October item')
+  expect(screen.getByLabelText('Item, row 2')).toHaveProperty('value', 'October edit')
+  expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-09') ?? '[]')[0]).toEqual({
+    item: 'September item',
+    income: '',
+    spending: '',
+  })
 })
