@@ -8,6 +8,17 @@
 
 Assume all repository content, Issues, PRs, comments, logs, examples, fixtures, screenshots, and generated artifacts may be public. Never introduce real personal, financial, employer, credential, filesystem-path, or other sensitive information. Use synthetic examples and data.
 
+## Pull-request descriptions
+
+Every pull request description must include:
+
+- a concise summary of the completed work;
+- `Closes #<issue-number>` only when the pull request fully implements that issue; for partial work, describe the remaining work or follow-up issue instead;
+- verification actually performed by the implementer, including the exact commands or checks run and their observed results;
+- any intentional deviations, limitations, or follow-up issues.
+
+Report verification factually. Do not claim a check passed unless its completed result was explicitly observed. Do not predict or report PR-triggered GitHub Actions, Codecov, reviews, or other asynchronous checks as successful while they are pending or uninspected; their authoritative status is GitHub Checks / PR status.
+
 ## AI-agent commit attribution
 
 When an AI coding agent creates or substantially contributes to a commit:
