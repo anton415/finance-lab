@@ -125,6 +125,9 @@ can parse successfully while failing this budget contract.
 
 ## Preservation and compatibility
 
+See the [restore guide](budget-backup-restore.md) for explicit confirmation,
+whole-month replacement, failure handling, reload behavior, and storage limits.
+
 For a supported, valid document, a later export → validate → restore → reload
 round trip must preserve the month, all ten rows, their order, and every `item`,
 `income`, and `spending` string. Preserve the distinction between `""`, `"0"`,

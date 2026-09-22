@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { currentMonthKey, loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
 import { BudgetExportError, serializeBudget, type BudgetExportFormat } from './budgetExport'
 import { downloadFile } from './downloadFile'
 import { BudgetBackupPreview } from './BudgetBackupPreview'
+import { localBudgetMonth } from './budgetRestore'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -22,10 +23,27 @@ function App() {
   const { month, rows } = budget
   const monthKey = currentMonthKey(month)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [restoreNotice, setRestoreNotice] = useState<string | null>(null)
+  const restoredBudget = useRef<typeof budget | null>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
+    // Restoration has already persisted this exact state. Ordinary edits create
+    // a new budget object and must still save, including the first restored edit.
+    if (budget === restoredBudget.current) return
     saveBudget(rows, monthKey)
-  }, [monthKey, rows])
+  }, [budget, monthKey, rows])
+
+  useLayoutEffect(() => {
+    if (restoreNotice) heading.current?.focus()
+  }, [restoreNotice, budget])
+
+  const showRestoredBudget = (nextBudget: typeof budget, backupMonth: string) => {
+    restoredBudget.current = nextBudget
+    setBudget(nextBudget)
+    setExportError(null)
+    setRestoreNotice(`Restored budget for ${backupMonth}`)
+  }
   const totalIncome = rows.reduce((total, row) => total + amount(row.income), 0)
   const totalSpending = rows.reduce(
     (total, row) => total + amount(row.spending),
@@ -33,9 +51,10 @@ function App() {
   )
 
   const changeMonth = (offset: number) => {
-    const nextMonth = new Date(month.getFullYear(), month.getMonth() + offset, 1)
+    const nextMonth = localBudgetMonth(month.getFullYear(), month.getMonth() + offset)
     setBudget({ month: nextMonth, rows: loadBudget(currentMonthKey(nextMonth)) })
     setExportError(null)
+    setRestoreNotice(null)
   }
 
   const exportBudget = (format: BudgetExportFormat) => {
@@ -58,6 +77,7 @@ function App() {
     }
 
     setExportError(null)
+    setRestoreNotice(null)
 
     setBudget((currentBudget) => ({
       ...currentBudget,
@@ -81,7 +101,8 @@ function App() {
 
   return (
     <main className="budget">
-      <h1>Monthly budget</h1>
+      <h1 ref={heading} tabIndex={-1}>Monthly budget</h1>
+      {restoreNotice && <p role="status">{restoreNotice}</p>}
 
       <div className="month-navigation">
         <button type="button" onClick={() => changeMonth(-1)}>Previous month</button>
@@ -107,7 +128,11 @@ function App() {
         {exportError && <p role="alert">{exportError}</p>}
       </div>
 
-      <BudgetBackupPreview />
+      <BudgetBackupPreview
+        budgetContext={budget}
+        onRestored={showRestoredBudget}
+        onRestoreActivity={() => setRestoreNotice(null)}
+      />
 
       <table>
         <thead>

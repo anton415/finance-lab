@@ -30,10 +30,10 @@ Use the [backup preview guide](budget-backup-preview.md) to validate and inspect
 a local JSON backup without changing budgets. The preview reader accepts at most
 1 MiB; this exporter has no equivalent size cap.
 
-**Restoration is not implemented by export or preview.** Confirmed restoration
-and reload verification belong to
-[#36](https://github.com/anton415/finance-lab/issues/36). Export tests establish
-data preservation, not a completed restore/reload flow.
+Choosing a file is read-only. Follow the [restore guide](budget-backup-restore.md)
+to explicitly confirm restoration of the backup's entire month. Only the final
+confirmation changes data; the guide explains replacement, reload behavior,
+failure handling, and storage limitations.
 
 ## CSV inspection
 
