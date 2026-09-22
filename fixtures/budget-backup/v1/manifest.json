@@ -1,0 +1,164 @@
+[
+  {
+    "file": "valid/empty.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "valid/mixed.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "valid/representation.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "invalid/malformed-json.txt",
+    "valid": false,
+    "reason": "INVALID_JSON",
+    "path": "$"
+  },
+  {
+    "file": "invalid/root-array.json",
+    "valid": false,
+    "reason": "INVALID_DOCUMENT",
+    "path": "$"
+  },
+  {
+    "file": "invalid/missing-month.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "month"
+  },
+  {
+    "file": "invalid/extra-root-property.json",
+    "valid": false,
+    "reason": "UNEXPECTED_PROPERTY",
+    "path": "totalIncome"
+  },
+  {
+    "file": "invalid/unsupported-version.json",
+    "valid": false,
+    "reason": "UNSUPPORTED_VERSION",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/version-string.json",
+    "valid": false,
+    "reason": "INVALID_VERSION_TYPE",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/month-format.json",
+    "valid": false,
+    "reason": "INVALID_MONTH",
+    "path": "month"
+  },
+  {
+    "file": "invalid/month-range.json",
+    "valid": false,
+    "reason": "INVALID_MONTH",
+    "path": "month"
+  },
+  {
+    "file": "invalid/rows-not-array.json",
+    "valid": false,
+    "reason": "INVALID_ROWS_TYPE",
+    "path": "rows"
+  },
+  {
+    "file": "invalid/nine-rows.json",
+    "valid": false,
+    "reason": "INVALID_ROW_COUNT",
+    "path": "rows"
+  },
+  {
+    "file": "invalid/eleven-rows.json",
+    "valid": false,
+    "reason": "INVALID_ROW_COUNT",
+    "path": "rows"
+  },
+  {
+    "file": "invalid/row-not-object.json",
+    "valid": false,
+    "reason": "INVALID_ROW_TYPE",
+    "path": "rows[0]"
+  },
+  {
+    "file": "invalid/missing-row-property.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "rows[0].spending"
+  },
+  {
+    "file": "invalid/item-not-string.json",
+    "valid": false,
+    "reason": "INVALID_FIELD_TYPE",
+    "path": "rows[0].item"
+  },
+  {
+    "file": "invalid/amount-not-string.json",
+    "valid": false,
+    "reason": "INVALID_FIELD_TYPE",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/extra-row-property.json",
+    "valid": false,
+    "reason": "UNEXPECTED_PROPERTY",
+    "path": "rows[0].category"
+  },
+  {
+    "file": "invalid/negative-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/comma-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/whitespace-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/nonnumeric-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/nonfinite-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/overflow-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "rows[0].income"
+  },
+  {
+    "file": "invalid/both-amounts.json",
+    "valid": false,
+    "reason": "BOTH_AMOUNTS_SET",
+    "path": "rows[0]"
+  },
+  {
+    "file": "invalid/both-zero-amounts.json",
+    "valid": false,
+    "reason": "BOTH_AMOUNTS_SET",
+    "path": "rows[0]"
+  }
+]

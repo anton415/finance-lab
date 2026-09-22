@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "month": "2026-09",
+  "rows": [
+    {"item": "Sample income", "income": "100.00", "spending": ""},
+    {"item": "Sample groceries", "income": "", "spending": "25.50"},
+    {"item": "  Sample \"quoted\", café  ", "income": "", "spending": "7.25"},
+    {"item": "Sample zero", "income": "0", "spending": ""},
+    {"item": "Sample note", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "Sample last row", "income": "", "spending": "2.00"}
+  ]
+}
