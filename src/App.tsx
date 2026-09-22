@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { currentMonthKey, loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
+import { BudgetExportError, serializeBudget, type BudgetExportFormat } from './budgetExport'
+import { downloadFile } from './downloadFile'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -18,6 +20,7 @@ function App() {
   })
   const { month, rows } = budget
   const monthKey = currentMonthKey(month)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
     saveBudget(rows, monthKey)
@@ -31,12 +34,29 @@ function App() {
   const changeMonth = (offset: number) => {
     const nextMonth = new Date(month.getFullYear(), month.getMonth() + offset, 1)
     setBudget({ month: nextMonth, rows: loadBudget(currentMonthKey(nextMonth)) })
+    setExportError(null)
+  }
+
+  const exportBudget = (format: BudgetExportFormat) => {
+    try {
+      const { month: selectedMonth, rows: selectedRows } = budget
+      const year = String(selectedMonth.getFullYear()).padStart(4, '0')
+      const monthNumber = String(selectedMonth.getMonth() + 1).padStart(2, '0')
+      downloadFile(serializeBudget(`${year}-${monthNumber}`, selectedRows, format))
+      setExportError(null)
+    } catch (error) {
+      setExportError(error instanceof BudgetExportError
+        ? error.message
+        : 'Could not prepare the download. Please try exporting again.')
+    }
   }
 
   const updateRow = (index: number, field: keyof BudgetRow, value: string) => {
     if ((field === 'income' || field === 'spending') && value.startsWith('-')) {
       return
     }
+
+    setExportError(null)
 
     setBudget((currentBudget) => ({
       ...currentBudget,
@@ -68,6 +88,22 @@ function App() {
           {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </span>
         <button type="button" onClick={() => changeMonth(1)}>Next month</button>
+      </div>
+
+      <div className="budget-export">
+        <div className="export-actions">
+          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('csv')}>
+            Export CSV
+          </button>
+          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('json')}>
+            Export JSON
+          </button>
+        </div>
+        <p id="export-help">
+          CSV is for inspection; nonempty item text gets an apostrophe prefix for spreadsheet handling.
+          {' '}JSON is a lossless backup.
+        </p>
+        {exportError && <p role="alert">{exportError}</p>}
       </div>
 
       <table>
