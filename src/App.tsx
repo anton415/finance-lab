@@ -32,6 +32,15 @@ function App() {
     0,
   )
 
+  const refreshCurrentMonth = () => {
+    setBudget((currentBudget) => {
+      const key = currentMonthKey()
+      return key === currentBudget.key
+        ? currentBudget
+        : { key, rows: loadBudget(key) }
+    })
+  }
+
   const updateRow = (index: number, field: keyof BudgetRow, value: string) => {
     if ((field === 'income' || field === 'spending') && value.startsWith('-')) {
       return
@@ -39,25 +48,26 @@ function App() {
 
     setBudget((currentBudget) => {
       const key = currentMonthKey()
-      const rows =
-        key === currentBudget.key ? currentBudget.rows : loadBudget(key)
+      if (key !== currentBudget.key) {
+        return { key, rows: loadBudget(key) }
+      }
 
       return {
         key,
-        rows: rows.map((row, rowIndex) => {
-        if (rowIndex !== index) {
-          return row
-        }
+        rows: currentBudget.rows.map((row, rowIndex) => {
+          if (rowIndex !== index) {
+            return row
+          }
 
-        if (field === 'income') {
-          return { ...row, income: value, spending: value === '' ? row.spending : '' }
-        }
+          if (field === 'income') {
+            return { ...row, income: value, spending: value === '' ? row.spending : '' }
+          }
 
-        if (field === 'spending') {
-          return { ...row, spending: value, income: value === '' ? row.income : '' }
-        }
+          if (field === 'spending') {
+            return { ...row, spending: value, income: value === '' ? row.income : '' }
+          }
 
-        return { ...row, item: value }
+          return { ...row, item: value }
         }),
       }
     })
@@ -82,6 +92,7 @@ function App() {
                 <input
                   aria-label={`Item, row ${index + 1}`}
                   onChange={(event) => updateRow(index, 'item', event.target.value)}
+                  onFocus={refreshCurrentMonth}
                   value={row.item}
                 />
               </td>
@@ -91,6 +102,7 @@ function App() {
                   inputMode="decimal"
                   min="0"
                   onChange={(event) => updateRow(index, 'income', event.target.value)}
+                  onFocus={refreshCurrentMonth}
                   step="0.01"
                   type="number"
                   value={row.income}
@@ -102,6 +114,7 @@ function App() {
                   inputMode="decimal"
                   min="0"
                   onChange={(event) => updateRow(index, 'spending', event.target.value)}
+                  onFocus={refreshCurrentMonth}
                   step="0.01"
                   type="number"
                   value={row.spending}

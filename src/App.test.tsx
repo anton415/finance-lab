@@ -17,8 +17,8 @@ const renderBudget = () => {
 
 const total = (label: string) => screen.getByLabelText(label)
 
-const budgetRows = (firstItem: string) => [
-  { item: firstItem, income: '', spending: '' },
+const budgetRows = (firstItem: string, firstIncome = '') => [
+  { item: firstItem, income: firstIncome, spending: '' },
   ...Array.from({ length: 9 }, () => ({ item: '', income: '', spending: '' })),
 ]
 
@@ -137,7 +137,9 @@ test('loads the new month before saving an edit after a month rollover', () => {
   render(<App />)
 
   vi.setSystemTime(new Date(2026, 9, 1))
-  fireEvent.change(screen.getByLabelText('Item, row 2'), {
+  const item = screen.getByLabelText('Item, row 2')
+  fireEvent.focus(item)
+  fireEvent.change(item, {
     target: { value: 'October edit' },
   })
 
@@ -146,6 +148,35 @@ test('loads the new month before saving an edit after a month rollover', () => {
   expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-09') ?? '[]')[0]).toEqual({
     item: 'September item',
     income: '',
+    spending: '',
+  })
+})
+
+test('refreshes a non-empty new-month field before accepting an edit', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 8, 30))
+  localStorage.setItem(
+    'finance-lab:budget:2026-09',
+    JSON.stringify(budgetRows('', '9')),
+  )
+  localStorage.setItem(
+    'finance-lab:budget:2026-10',
+    JSON.stringify(budgetRows('', '50')),
+  )
+  render(<App />)
+
+  vi.setSystemTime(new Date(2026, 9, 1))
+  const income = screen.getByLabelText('Income, row 1')
+  fireEvent.focus(income)
+
+  expect(income).toHaveProperty('value', '50')
+
+  fireEvent.change(income, { target: { value: '500' } })
+
+  expect(income).toHaveProperty('value', '500')
+  expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-10') ?? '[]')[0]).toEqual({
+    item: '',
+    income: '500',
     spending: '',
   })
 })
