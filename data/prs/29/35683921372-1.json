@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "record_kind": "github_pr_ci_observation",
+  "collected_at": "2026-09-22T03:39:06.751Z",
+  "collector_run": {
+    "id": "35683921372",
+    "attempt": "1",
+    "sha": "20b017525b8fa773149ac37b6f2167b041b66f1a"
+  },
+  "pr": {
+    "number": 29,
+    "state": "open",
+    "draft": false,
+    "created_at": "2026-09-21T17:32:34Z",
+    "updated_at": "2026-09-22T03:38:23Z",
+    "closed_at": "unknown",
+    "merged_at": "unknown",
+    "head_sha": "9d5c8cf7eaa0a9fe93c1cac88a43af5e424a7db1",
+    "base_sha": "20b017525b8fa773149ac37b6f2167b041b66f1a",
+    "commits": 4,
+    "additions": 152,
+    "deletions": 14,
+    "changed_files": 3
+  },
+  "reviews": [
+    {
+      "id": 5269852991,
+      "state": "COMMENTED",
+      "submitted_at": "2026-09-21T17:34:56Z",
+      "commit_id": "3b11b1bdd5dd0732f1243f1a8ca0567d67f7c2ce"
+    },
+    {
+      "id": 5269981695,
+      "state": "COMMENTED",
+      "submitted_at": "2026-09-21T17:48:31Z",
+      "commit_id": "43f564057a1cdf58dda7efe0c81ea03fcb7bd97e"
+    },
+    {
+      "id": 5273887680,
+      "state": "COMMENTED",
+      "submitted_at": "2026-09-22T03:29:04Z",
+      "commit_id": "57ff9532557359c9d13983ef5353019f6710c4e2"
+    }
+  ],
+  "ci_runs": [
+    {
+      "id": 35683898219,
+      "name": "CI",
+      "event": "pull_request",
+      "head_sha": "9d5c8cf7eaa0a9fe93c1cac88a43af5e424a7db1",
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-09-22T03:38:27Z",
+      "updated_at": "2026-09-22T03:38:49Z",
+      "html_url": "https://github.com/anton415/finance-lab/actions/runs/35683898219"
+    }
+  ]
+}
