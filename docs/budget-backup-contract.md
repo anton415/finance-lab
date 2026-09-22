@@ -9,6 +9,8 @@ delivery defines the format; it does not implement export, validation, or restor
 
 The [budget export guide](budget-export.md) describes the selected-month CSV and
 JSON exporter and its spreadsheet limitations; this v1 contract is unchanged.
+The [backup preview guide](budget-backup-preview.md) describes local-file
+validation, reader limits, and read-only destination status.
 
 ## Document shape
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { currentMonthKey, loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
 import { BudgetExportError, serializeBudget, type BudgetExportFormat } from './budgetExport'
 import { downloadFile } from './downloadFile'
+import { BudgetBackupPreview } from './BudgetBackupPreview'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -105,6 +106,8 @@ function App() {
         </p>
         {exportError && <p role="alert">{exportError}</p>}
       </div>
+
+      <BudgetBackupPreview />
 
       <table>
         <thead>

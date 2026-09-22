@@ -56,6 +56,53 @@ button:focus-visible {
   margin: 0.75rem 0 0;
 }
 
+.backup-preview {
+  margin-bottom: 1.5rem;
+}
+
+.backup-preview label {
+  font-weight: 600;
+}
+
+.backup-preview p {
+  margin: 0.75rem 0;
+}
+
+.backup-preview [role="status"]:empty {
+  margin: 0;
+}
+
+.backup-table-scroll {
+  overflow-x: auto;
+}
+
+.backup-table {
+  table-layout: fixed;
+}
+
+.backup-table caption {
+  padding: 0.75rem 0;
+  text-align: left;
+  font-weight: 600;
+}
+
+.backup-table th,
+.backup-table td {
+  padding: 0.5rem;
+  vertical-align: top;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.backup-table th:first-child {
+  width: 2.5rem;
+}
+
+.backup-table th:nth-child(2) {
+  width: 45%;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
