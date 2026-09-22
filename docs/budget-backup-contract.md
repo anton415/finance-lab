@@ -7,6 +7,9 @@ The [shared fixtures](../fixtures/budget-backup/v1/) and their
 expected classifications for later TypeScript and Python validators. This
 delivery defines the format; it does not implement export, validation, or restore.
 
+The [budget export guide](budget-export.md) describes the selected-month CSV and
+JSON exporter and its spreadsheet limitations; this v1 contract is unchanged.
+
 ## Document shape
 
 A backup is a JSON object with exactly three required properties:

@@ -43,6 +43,19 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.budget-export {
+  margin-bottom: 1.5rem;
+}
+
+.export-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.budget-export p {
+  margin: 0.75rem 0 0;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
