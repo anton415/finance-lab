@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  currentMonthKey,
-  loadBudget,
-  saveBudget,
-  type BudgetRow,
-} from './budgetStorage'
+import { currentMonthKey, loadBudget, saveBudget, type BudgetRow } from './budgetStorage'
 
 const amount = (value: string) => {
   const parsedValue = Number(value)
@@ -17,60 +12,40 @@ const formatAmount = (value: number) =>
   value.toLocaleString(undefined, { maximumFractionDigits: 2 })
 
 function App() {
-  const [budget, setBudget] = useState(() => {
-    const key = currentMonthKey()
-    return { key, rows: loadBudget(key) }
-  })
-  const { rows } = budget
+  const [monthKey] = useState(currentMonthKey)
+  const [rows, setRows] = useState<BudgetRow[]>(() => loadBudget(monthKey))
 
   useEffect(() => {
-    saveBudget(budget.rows, budget.key)
-  }, [budget])
+    saveBudget(rows, monthKey)
+  }, [monthKey, rows])
   const totalIncome = rows.reduce((total, row) => total + amount(row.income), 0)
   const totalSpending = rows.reduce(
     (total, row) => total + amount(row.spending),
     0,
   )
 
-  const refreshCurrentMonth = () => {
-    setBudget((currentBudget) => {
-      const key = currentMonthKey()
-      return key === currentBudget.key
-        ? currentBudget
-        : { key, rows: loadBudget(key) }
-    })
-  }
-
   const updateRow = (index: number, field: keyof BudgetRow, value: string) => {
     if ((field === 'income' || field === 'spending') && value.startsWith('-')) {
       return
     }
 
-    setBudget((currentBudget) => {
-      const key = currentMonthKey()
-      if (key !== currentBudget.key) {
-        return { key, rows: loadBudget(key) }
-      }
+    setRows((currentRows) =>
+      currentRows.map((row, rowIndex) => {
+        if (rowIndex !== index) {
+          return row
+        }
 
-      return {
-        key,
-        rows: currentBudget.rows.map((row, rowIndex) => {
-          if (rowIndex !== index) {
-            return row
-          }
+        if (field === 'income') {
+          return { ...row, income: value, spending: value === '' ? row.spending : '' }
+        }
 
-          if (field === 'income') {
-            return { ...row, income: value, spending: value === '' ? row.spending : '' }
-          }
+        if (field === 'spending') {
+          return { ...row, spending: value, income: value === '' ? row.income : '' }
+        }
 
-          if (field === 'spending') {
-            return { ...row, spending: value, income: value === '' ? row.income : '' }
-          }
-
-          return { ...row, item: value }
-        }),
-      }
-    })
+        return { ...row, item: value }
+      }),
+    )
   }
 
   return (
@@ -92,7 +67,6 @@ function App() {
                 <input
                   aria-label={`Item, row ${index + 1}`}
                   onChange={(event) => updateRow(index, 'item', event.target.value)}
-                  onFocus={refreshCurrentMonth}
                   value={row.item}
                 />
               </td>
@@ -102,7 +76,6 @@ function App() {
                   inputMode="decimal"
                   min="0"
                   onChange={(event) => updateRow(index, 'income', event.target.value)}
-                  onFocus={refreshCurrentMonth}
                   step="0.01"
                   type="number"
                   value={row.income}
@@ -114,7 +87,6 @@ function App() {
                   inputMode="decimal"
                   min="0"
                   onChange={(event) => updateRow(index, 'spending', event.target.value)}
-                  onFocus={refreshCurrentMonth}
                   step="0.01"
                   type="number"
                   value={row.spending}

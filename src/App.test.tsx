@@ -123,36 +123,7 @@ test('falls back to empty rows when saved data is malformed', () => {
   expect(screen.getAllByRole('textbox', { name: /item, row/i })).toHaveLength(10)
 })
 
-test('loads the new month before saving an edit after a month rollover', () => {
-  vi.useFakeTimers()
-  vi.setSystemTime(new Date(2026, 8, 30))
-  localStorage.setItem(
-    'finance-lab:budget:2026-09',
-    JSON.stringify(budgetRows('September item')),
-  )
-  localStorage.setItem(
-    'finance-lab:budget:2026-10',
-    JSON.stringify(budgetRows('October item')),
-  )
-  render(<App />)
-
-  vi.setSystemTime(new Date(2026, 9, 1))
-  const item = screen.getByLabelText('Item, row 2')
-  fireEvent.focus(item)
-  fireEvent.change(item, {
-    target: { value: 'October edit' },
-  })
-
-  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', 'October item')
-  expect(screen.getByLabelText('Item, row 2')).toHaveProperty('value', 'October edit')
-  expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-09') ?? '[]')[0]).toEqual({
-    item: 'September item',
-    income: '',
-    spending: '',
-  })
-})
-
-test('refreshes a non-empty new-month field before accepting an edit', () => {
+test('keeps an open budget in its startup month across a rollover', () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 8, 30))
   localStorage.setItem(
@@ -165,18 +136,25 @@ test('refreshes a non-empty new-month field before accepting an edit', () => {
   )
   render(<App />)
 
-  vi.setSystemTime(new Date(2026, 9, 1))
   const income = screen.getByLabelText('Income, row 1')
   fireEvent.focus(income)
+  vi.setSystemTime(new Date(2026, 9, 1))
+  fireEvent.change(income, { target: { value: '90' } })
 
-  expect(income).toHaveProperty('value', '50')
+  expect(income).toHaveProperty('value', '90')
+  expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-09') ?? '[]')[0]).toEqual({
+    item: '',
+    income: '90',
+    spending: '',
+  })
 
-  fireEvent.change(income, { target: { value: '500' } })
+  cleanup()
+  render(<App />)
 
-  expect(income).toHaveProperty('value', '500')
+  expect(screen.getByLabelText('Income, row 1')).toHaveProperty('value', '50')
   expect(JSON.parse(localStorage.getItem('finance-lab:budget:2026-10') ?? '[]')[0]).toEqual({
     item: '',
-    income: '500',
+    income: '50',
     spending: '',
   })
 })
