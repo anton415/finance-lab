@@ -8,6 +8,14 @@
 
 Assume all repository content, Issues, PRs, comments, logs, examples, fixtures, screenshots, and generated artifacts may be public. Never introduce real personal, financial, employer, credential, filesystem-path, or other sensitive information. Use synthetic examples and data.
 
+## Code review rules
+
+- Review each PR against its linked issue's scope and acceptance criteria.
+- Report concrete correctness, regression, security, data-loss, or acceptance-criteria problems within that scope.
+- Do not require out-of-scope scenarios solely for robustness, extensibility, or architectural completeness.
+- Do not require abstractions, infrastructure, synchronization, or defensive behavior unless the current issue requires it or it prevents a concrete in-scope defect.
+- Do not treat a potential problem that depends on an out-of-scope scenario as blocking.
+
 ## Pull-request descriptions
 
 Every pull request description must include:
