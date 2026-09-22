@@ -12,6 +12,16 @@ export const currentMonthKey = (date = new Date()) => {
   return `finance-lab:budget:${date.getFullYear()}-${month}`
 }
 
+// The caller supplies a validated YYYY-MM backup month.
+export const getBudgetPresence = (month: string): 'existing' | 'absent' | 'unknown' => {
+  const key = `finance-lab:budget:${Number(month.slice(0, 4))}-${month.slice(5)}`
+  try {
+    return localStorage.getItem(key) === null ? 'absent' : 'existing'
+  } catch {
+    return 'unknown'
+  }
+}
+
 const isBudgetRow = (value: unknown): value is BudgetRow => {
   if (typeof value !== 'object' || value === null) {
     return false

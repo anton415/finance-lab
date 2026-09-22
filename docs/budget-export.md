@@ -26,9 +26,11 @@ indentation, and a final LF. Lossless means preserving the parsed data, not the
 original JSON whitespace or escape spelling. CSV's item prefix is never added
 to JSON.
 
-**Restoration is not implemented by this export feature.** Uploaded-file
-validation and preview belong to
-[#35](https://github.com/anton415/finance-lab/issues/35); confirmed restoration
+Use the [backup preview guide](budget-backup-preview.md) to validate and inspect
+a local JSON backup without changing budgets. The preview reader accepts at most
+1 MiB; this exporter has no equivalent size cap.
+
+**Restoration is not implemented by export or preview.** Confirmed restoration
 and reload verification belong to
 [#36](https://github.com/anton415/finance-lab/issues/36). Export tests establish
 data preservation, not a completed restore/reload flow.

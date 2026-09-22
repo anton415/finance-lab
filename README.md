@@ -11,6 +11,8 @@ All examples and financial data in this repository are synthetic.
 
 See the [budget export guide](docs/budget-export.md) for selected-month CSV
 inspection and lossless JSON backups, including spreadsheet limitations.
+Use the [backup preview guide](docs/budget-backup-preview.md) to validate and
+inspect a local JSON backup without changing any budgets.
 
 ## Codex Cloud PR reviews
 
