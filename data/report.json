@@ -89,9 +89,9 @@
     {
       "pr_number": 29,
       "cycle_time_hours": "unknown",
-      "commits": 3,
-      "additions": 216,
-      "deletions": 28,
+      "commits": 4,
+      "additions": 152,
+      "deletions": 14,
       "changed_files": 3,
       "ci_attempts": 1,
       "ci_failures": 0,
