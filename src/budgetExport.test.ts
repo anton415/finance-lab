@@ -162,6 +162,22 @@ const invalidSourceCases = manifest.filter(
 )
 
 describe.each(['csv', 'json'] as const)('%s source guard', (format) => {
+  test('propagates unexpected source-access failures without reporting a contract error', () => {
+    const failure = new TypeError('Sample source access failure')
+    const rows = emptyRows()
+    Object.defineProperty(rows[0], 'item', { get: () => { throw failure } })
+    let caught: unknown
+
+    try {
+      serializeBudget('2026-09', rows, format)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBe(failure)
+    expect(caught).not.toBeInstanceOf(BudgetExportError)
+  })
+
   test.each(invalidSourceCases)('rejects shared fixture $file without altering it', ({ file, path }) => {
     const document = invalidFixtures[`../fixtures/budget-backup/v1/${file}`]
     const before = JSON.stringify(document)
