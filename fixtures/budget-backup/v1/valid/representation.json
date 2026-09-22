@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "month": "2027-01",
+  "rows": [
+    {"item": "", "income": "0010.00", "spending": ""},
+    {"item": "Sample representation", "income": "", "spending": "0.00"},
+    {"item": "Sample representation", "income": ".5", "spending": ""},
+    {"item": "Sample precision", "income": "", "spending": "1.234"},
+    {"item": "Sample exponent", "income": "1e3", "spending": ""},
+    {"item": "Sample small exponent", "income": "", "spending": "1E-3"},
+    {"item": "Sample explicit exponent", "income": "1e+3", "spending": ""},
+    {"item": "Sample café\nSample строка", "income": "", "spending": "100"},
+    {"item": "Sample zero", "income": "0", "spending": ""},
+    {"item": "", "income": "", "spending": ""}
+  ]
+}

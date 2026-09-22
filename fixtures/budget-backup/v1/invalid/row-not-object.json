@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "month": "2026-10",
+  "rows": [
+    null,
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""},
+    {"item": "", "income": "", "spending": ""}
+  ]
+}
