@@ -7,11 +7,12 @@ and line breaks remain visible, and income/spending values retain their original
 text, such as `0010.00`, `.5`, `1.234`, and `1e+3`. Empty values remain distinct
 from zero. Long contents wrap or scroll without being truncated.
 
-**This is preview only. Nothing is restored or changed.** The displayed budget
+**Choosing a file is preview only. Nothing is restored or changed.** The displayed budget
 can remain on another month. Editing or navigating the budget does not apply or
-retarget the preview. No Apply/Restore action or overwrite confirmation is
-included; confirmed restoration belongs to
-[#36](https://github.com/anton415/finance-lab/issues/36).
+retarget the preview. **Restore backup…** opens a fresh, read-only confirmation;
+only its final month-specific action changes data. See the
+[restore guide](budget-backup-restore.md) for replacement, cancellation, failures,
+and storage limitations.
 
 ## Files and limits
 
@@ -84,8 +85,9 @@ initialize data, or write anything. It preserves the existing key convention:
 The lookup does not construct dates or apply a timezone conversion.
 
 This snapshot is not a reservation, overwrite permission, or a live cross-tab
-subscription. Subsequent storage changes can make it stale. Issue #36 must
-establish its own confirmation and write boundary.
+subscription. Subsequent storage changes can make it stale. Restoration checks
+the destination again when opening confirmation and immediately before writing;
+the preview status also updates after these checks or a read failure.
 
 ## Clearing, cancellation, and retries
 
@@ -106,7 +108,7 @@ file attempt can display a result:
 
 Selecting, replacing, clearing, canceling, and completing or failing a read do
 not change the selected budget month, its rows or totals, or any stored keys
-and values. Preview never calls the save helper or storage write/removal
+and values. Preview actions never call the save helper or storage write/removal
 methods, including writes of identical values. Normal user edits and month
 navigation retain their existing persistence behavior.
 

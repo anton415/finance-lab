@@ -13,10 +13,12 @@ export const currentMonthKey = (date = new Date()) => {
 }
 
 // The caller supplies a validated YYYY-MM backup month.
+export const backupMonthKey = (month: string) =>
+  `finance-lab:budget:${Number(month.slice(0, 4))}-${month.slice(5)}`
+
 export const getBudgetPresence = (month: string): 'existing' | 'absent' | 'unknown' => {
-  const key = `finance-lab:budget:${Number(month.slice(0, 4))}-${month.slice(5)}`
   try {
-    return localStorage.getItem(key) === null ? 'absent' : 'existing'
+    return localStorage.getItem(backupMonthKey(month)) === null ? 'absent' : 'existing'
   } catch {
     return 'unknown'
   }

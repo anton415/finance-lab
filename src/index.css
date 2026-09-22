@@ -60,6 +60,24 @@ button:focus-visible {
   margin-bottom: 1.5rem;
 }
 
+dialog {
+  max-width: 30rem;
+  padding: 1.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.restore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.75rem;
+}
+
 .backup-preview label {
   font-weight: 600;
 }

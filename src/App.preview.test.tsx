@@ -136,7 +136,7 @@ test('provides a labelled keyboard-accessible single-file input with preview lim
   expect(document.activeElement).toBe(input)
   expect(clearButton()).toHaveProperty('type', 'button')
   expect(clearButton()).toHaveProperty('disabled', true)
-  expect(screen.queryByRole('button', { name: /apply|restore/i })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Restore backup…' })).toHaveProperty('disabled', true)
 })
 
 test.each([

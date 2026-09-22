@@ -13,6 +13,8 @@ See the [budget export guide](docs/budget-export.md) for selected-month CSV
 inspection and lossless JSON backups, including spreadsheet limitations.
 Use the [backup preview guide](docs/budget-backup-preview.md) to validate and
 inspect a local JSON backup without changing any budgets.
+Use the [restore guide](docs/budget-backup-restore.md) to confirm replacement of
+the backup's month, including failure handling and storage limitations.
 
 ## Codex Cloud PR reviews
 
