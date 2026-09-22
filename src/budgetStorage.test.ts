@@ -57,19 +57,31 @@ describe('independent monthly budgets', () => {
 
 test('uses the same key throughout a local calendar month', () => {
   const expectedKey = 'finance-lab:budget:2026-09'
+  // Model local midnight at UTC+03:00 independently of the host timezone.
+  const monthStart = Object.assign(new Date('2026-09-01T00:00:00+03:00'), {
+    getMonth: () => 8,
+    getFullYear: () => 2026,
+  })
 
-  expect(currentMonthKey(new Date(2026, 8, 1, 0, 0, 0))).toBe(expectedKey)
+  expect(monthStart.getUTCMonth()).toBe(7)
+  expect(currentMonthKey(monthStart)).toBe(expectedKey)
   expect(currentMonthKey(new Date(2026, 8, 15, 12, 0, 0))).toBe(expectedKey)
   expect(currentMonthKey(new Date(2026, 8, 30, 23, 59, 59))).toBe(expectedKey)
 })
 
 test('distinguishes December from January across a year boundary', () => {
+  // This local January date is still December of the previous year in UTC.
+  const yearStart = Object.assign(new Date('2027-01-01T00:00:00+03:00'), {
+    getMonth: () => 0,
+    getFullYear: () => 2027,
+  })
+
+  expect(yearStart.getUTCMonth()).toBe(11)
+  expect(yearStart.getUTCFullYear()).toBe(2026)
   expect(currentMonthKey(new Date(2026, 11, 31, 23, 59, 59))).toBe(
     'finance-lab:budget:2026-12',
   )
-  expect(currentMonthKey(new Date(2027, 0, 1, 0, 0, 0))).toBe(
-    'finance-lab:budget:2027-01',
-  )
+  expect(currentMonthKey(yearStart)).toBe('finance-lab:budget:2027-01')
 })
 
 test('distinguishes the same month in different years', () => {
