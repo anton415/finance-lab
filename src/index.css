@@ -26,6 +26,23 @@ h1 {
   font-size: 1.75rem;
 }
 
+.month-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.month-navigation span {
+  text-align: center;
+}
+
+button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

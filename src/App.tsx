@@ -12,8 +12,12 @@ const formatAmount = (value: number) =>
   value.toLocaleString(undefined, { maximumFractionDigits: 2 })
 
 function App() {
-  const [monthKey] = useState(currentMonthKey)
-  const [rows, setRows] = useState<BudgetRow[]>(() => loadBudget(monthKey))
+  const [budget, setBudget] = useState(() => {
+    const month = new Date()
+    return { month, rows: loadBudget(currentMonthKey(month)) }
+  })
+  const { month, rows } = budget
+  const monthKey = currentMonthKey(month)
 
   useEffect(() => {
     saveBudget(rows, monthKey)
@@ -24,13 +28,19 @@ function App() {
     0,
   )
 
+  const changeMonth = (offset: number) => {
+    const nextMonth = new Date(month.getFullYear(), month.getMonth() + offset, 1)
+    setBudget({ month: nextMonth, rows: loadBudget(currentMonthKey(nextMonth)) })
+  }
+
   const updateRow = (index: number, field: keyof BudgetRow, value: string) => {
     if ((field === 'income' || field === 'spending') && value.startsWith('-')) {
       return
     }
 
-    setRows((currentRows) =>
-      currentRows.map((row, rowIndex) => {
+    setBudget((currentBudget) => ({
+      ...currentBudget,
+      rows: currentBudget.rows.map((row, rowIndex) => {
         if (rowIndex !== index) {
           return row
         }
@@ -45,12 +55,20 @@ function App() {
 
         return { ...row, item: value }
       }),
-    )
+    }))
   }
 
   return (
     <main className="budget">
       <h1>Monthly budget</h1>
+
+      <div className="month-navigation">
+        <button type="button" onClick={() => changeMonth(-1)}>Previous month</button>
+        <span aria-live="polite">
+          {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <button type="button" onClick={() => changeMonth(1)}>Next month</button>
+      </div>
 
       <table>
         <thead>
