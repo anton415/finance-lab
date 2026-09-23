@@ -8,8 +8,11 @@ The [tests](../tests/python/test_budget_backup.py) verify the shared contract an
 Python-specific behavior without third-party dependencies.
 
 The technical implementation for [issue #37](https://github.com/anton415/finance-lab/issues/37)
-is complete. **The issue remains open for the human learning check** described
-below; passing tests and agent assistance do not complete that check.
+is delivered by [PR #78](https://github.com/anton415/finance-lab/pull/78).
+**Scope decision, 2026-09-23:** the maintainer will complete the personal Python
+learning separately, outside both PR #78 and issue #37. It is not a merge or
+issue-closure requirement. The learning remains pending; passing tests, merging
+code, and closing the technical issue do not establish a completed learning outcome.
 
 ## Setup
 
@@ -175,7 +178,7 @@ duplicate-key rule or a custom parser. The byte limit is not a hostile-input
 sandbox. If you find a mismatch, preserve a minimal synthetic example and resolve
 the authoritative contract question instead of changing fixtures to hide it.
 
-## Focused resources and human check
+## Focused resources and separate personal learning
 
 - [Python tutorial](https://docs.python.org/3/tutorial/): functions, dictionaries,
   lists, modules, exceptions, and file I/O.
@@ -192,22 +195,23 @@ the authoritative contract question instead of changing fixtures to hide it.
   background; this small shell uses explicit argument handling to avoid echoing
   rejected argument values.
 
-Before closure, personally implement or substantially debug the validator and
-explain `arguments → bounded file read → UTF-8/BOM → JSON → contract checks → safe
-diagnostic/exit`. Classify one valid and one invalid fixture, explain why `true`
-is not version `1`, why two zero strings are populated, and why underflow retains
-`"1e-9999"`.
+For the separate personal learning, personally implement or substantially debug
+the validator and explain `arguments → bounded file read → UTF-8/BOM → JSON →
+contract checks → safe diagnostic/exit`. Classify one valid and one invalid
+fixture, explain why `true` is not version `1`, why two zero strings are populated,
+and why underflow retains `"1e-9999"`.
 
 Independently make and test one small change (for example, a safe message and its
 assertion, or a missing edge-case test). Do not change the contract merely to
-create an exercise. Record your own contribution, exact command/results, and AI
-assistance before closing the issue.
+create an exercise. Keep any learning evidence separately from PR #78 and issue
+#37; it is not required for their completion.
 
 Contribution record: the maintainer wrote the initial JSON decoding with
 `parse_int=float` / `parse_float=float` and the `JSONDecodeError` translation.
 Codex prepared the original tests and file/CLI shell, reviewed that edit, and
 completed constant rejection, resource-limit handling, contract validation,
 return-value handling, documentation, and verification at the maintainer's request.
-**The full human learning check remains pending**, including evidence of
-substantial hands-on implementation/debugging, the control-flow explanation, and
-an independent tested change. No completed human learning outcome is claimed.
+**The personal learning remains pending outside PR #78 and issue #37.** This
+includes substantial hands-on implementation/debugging, the control-flow
+explanation, and an independent tested change. No completed human learning
+outcome is claimed.
