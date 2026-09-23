@@ -6,7 +6,9 @@ rules, calibration evidence, and M3 isolation requirements. This file is
 
 ## Index
 
-All records are **version 1**, initially defined for #38 on 2026-09-23.
+Records were initially defined at **version 1** for #38 on 2026-09-23.
+**FL-CE-001 is now version 2**; records 002–012 remain version 1. See 001's
+version history for the request/grader alignment correction and retained v1.
 “Reconstruction” means a deliberately introduced regression representing a real
 requirement; it does not claim that regression occurred in the product.
 
@@ -101,7 +103,7 @@ are excluded from operation-induced counts.
 
 ## FL-CE-001
 
-**Identity:** version 1 — Repair misleading month-isolation coverage.
+**Identity:** version 2 — Repair misleading month-isolation coverage.
 Tags: testing, valid fixtures, regression discrimination, preservation, scope.
 
 ### Agent-visible
@@ -111,14 +113,20 @@ Tags: testing, valid fixtures, regression discrimination, preservation, scope.
 1. Strengthen `does not load a budget from another month` in `src/App.test.tsx`.
    The loader accepts stored budgets only when they are arrays of exactly ten
    rows with string `item`, `income`, and `spending` fields. Seed a valid,
-   recognizable prior-month budget and show that rendering a different, unsaved
-   month displays all ten empty rows, without reading prior-month content into
-   the visible budget. Use controlled local calendar dates.
-2. Verify the prior month's exact raw stored value remains unchanged after the
-   render. Preserve existing totals, malformed-storage, and remount coverage.
-3. Tests must pass correct behavior and detect a loader reading another month;
-   strengthening tests must not change production behavior. Do not skip tests
-   or introduce unconditional failures.
+   recognizable **August 2026** budget under `finance-lab:budget:2026-08`,
+   including at least one nonempty item. Leave `finance-lab:budget:2026-09`
+   absent before rendering. Set a controlled local-calendar date in
+   **September 2026** and show that rendering displays all ten empty rows,
+   without reading August's content into the visible budget. Keep these two
+   months for this scenario; additional month pairs are optional.
+2. Verify the exact raw value under `finance-lab:budget:2026-08` remains
+   unchanged after the September render. Preserve existing totals,
+   malformed-storage, and remount coverage.
+3. Tests must pass correct behavior and detect a loader reading the seeded
+   August budget while September is requested; strengthening tests must not
+   change production behavior. Do not skip tests or introduce unconditional
+   failures. Equivalent test implementations are allowed within this stated
+   August/September scenario; no particular item text or helper is required.
 
 **Allowed changes:** `src/App.test.tsx` only, including small test-local helpers.
 Production files, storage rules, dependencies/config, and existing unrelated
@@ -128,6 +136,17 @@ coverage are protected. Submit the common patch and verification note.
 then the common ordinary checks. Confirm that the focused test executed.
 
 ### Evaluator-only
+
+**Version history:** version 2, 2026-09-23, makes the already-calibrated
+August/September scenario explicit in the request, including a recognizable
+nonempty item and an initially absent September key. Version 1 allowed an
+unspecified prior/current month pair while its grader hardcoded August;
+that mismatch could reject a valid alternative setup. The
+[original v1 definition](https://github.com/anton415/finance-lab/blob/dc2f9278cb9d24347442f41dbc618d345b5f8774/docs/evals/coding-agent-tasks.md#fl-ce-001)
+remains available for historical interpretation. Do not retroactively grade
+v1 submissions against v2's new explicit constraints. A v1 month/setup mismatch
+is a grader-design problem, not evidence of candidate failure. No agent trials
+are reported; any future trial must identify the request version it receives.
 
 **Provenance:** historical defect from [#15](https://github.com/anton415/finance-lab/issues/15)
 and [PR #31](https://github.com/anton415/finance-lab/pull/31). The one-row setup
@@ -143,18 +162,27 @@ The original synthetic August one-row seed stays in the starting test for the
 agent to repair. Do not include any reference test changes in the bundle.
 
 **Grading / controls:** follow the [worked protocol](README.md#worked-calibration-fl-ce-001).
-G1: review valid ten-row setup and all visible fields, then run the candidate
-against correct and wrong-August-key production. G2: inspect/run the exact raw
-August preservation assertion; run the ordinary application suite with correct
-production. G3: require a meaningful selected test, reject always-failing and
-skipped/no-op controls, and inspect a test-only diff. Reference: the App test
-file at `141cfd95e80a3d29c602b1cbcfea641f14434d7b`, available and exercised.
-Accept equivalents; do not require its helper or extra A → B → A test.
+G1: first check that the candidate seeds a valid ten-row August 2026 budget
+with a nonempty item, leaves September 2026 absent, and renders in September;
+inspect all visible fields, then run correct and wrong-August-key production.
+If an evaluator prepared different months or supplied a different request,
+stop with `GRADER_ERROR` rather than treating the resulting nondetection as
+`TASK_FAIL`. G2: inspect/run the exact raw August preservation assertion; run
+the ordinary application suite with correct production. G3: require a meaningful
+selected test, reject always-failing and skipped/no-op controls, and inspect a
+test-only diff. Reference: the App test file at
+`141cfd95e80a3d29c602b1cbcfea641f14434d7b`, available and exercised.
+Accept equivalent implementations of the explicit scenario; do not require the
+reference's item text, helper, or extra A → B → A test.
 
 **Readiness:** **Runnable for manual grading**, shortlist member. The guide
 records the observed four-candidate matrix, runtime, and commands. The reference
 passed 10 ordinary tests, and its focused test alone failed on wrong-month
-content. Rubric judgment on a future submitted patch still requires review.
+content. The pinned source, reference, mutation, and commands are unchanged in
+v2; the recorded August/September controls meet its now-explicit scenario.
+That existing control evidence is retained, not relabelled as a new calibration
+run or a v2 agent trial. Rubric judgment on a future submitted patch still
+requires review.
 
 **Limitations:** narrow wrong-key mutation; preservation is also checked by
 assertion review, not a separately calibrated write mutation. Public historical
