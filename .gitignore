@@ -3,6 +3,11 @@ node_modules/
 dist/
 coverage/
 
+# Local Python environment and bytecode
+.venv/
+__pycache__/
+*.py[cod]
+
 # Environment files
 .env
 .env.*

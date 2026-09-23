@@ -15,6 +15,8 @@ Use the [backup preview guide](docs/budget-backup-preview.md) to validate and
 inspect a local JSON backup without changing any budgets.
 Use the [restore guide](docs/budget-backup-restore.md) to confirm replacement of
 the backup's month, including failure handling and storage limitations.
+The [Python validator learning guide](docs/python-budget-validator.md) provides
+a CLI scaffold and tests for implementing the same backup contract in Python.
 
 ## Codex Cloud PR reviews
 
