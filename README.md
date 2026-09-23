@@ -18,6 +18,9 @@ the backup's month, including failure handling and storage limitations.
 Use the [Python validator guide](docs/python-budget-validator.md) to validate
 a local backup with the standard-library CLI and run the shared-contract tests.
 
+See the [coding-agent evaluation guide](docs/evals/README.md) for candidate tasks
+and the manually calibrated month-isolation example.
+
 ## Codex Cloud PR reviews
 
 Codex Cloud is an advisory PR reviewer. It automatically reviews PRs opened by the repository owner when they are opened; exhaustive review is disabled. A human evaluates every finding and decides whether a change is required. Codex findings do not modify code, approve, merge, deploy, or perform external actions. GitHub remains authoritative for relevant CI and check results.
