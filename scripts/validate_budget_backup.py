@@ -1,21 +1,21 @@
-"""Read-only CLI scaffold for the maintainer's v1 budget-validator exercise.
+"""Read-only, standard-library validator for the v1 budget-backup contract."""
 
-The file/CLI boundaries are supplied; parse_budget_backup is intentionally TODO.
-See docs/python-budget-validator.md before using this as a validator.
-"""
-
+import json
+import math
 from pathlib import Path
+import re
 import sys
 
 
 MAX_BACKUP_BYTES = 1_048_576
+DOCUMENT_FIELDS = ("formatVersion", "month", "rows")
+ROW_FIELDS = ("item", "income", "spending")
+AMOUNT_PATTERN = re.compile(r"(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 HELP = """usage: validate_budget_backup.py FILE
 
 Validate one explicitly supplied local UTF-8 budget backup (at most 1 MiB).
 Relative paths resolve against the current working directory.
 Use -h or --help to show this help.
-
-Scaffold: the core parser still needs to be implemented.
 """
 
 
@@ -41,14 +41,108 @@ class BudgetBackupError(Exception):
         self.container_path = container_path
 
 
-def parse_budget_backup(text: str) -> dict[str, object]:
-    """Return the original parsed document, or raise BudgetBackupError.
+def _reject_constant(_value: str) -> None:
+    raise BudgetBackupError(
+        "INVALID_JSON", "$", "The input must contain valid JSON."
+    )
 
-    Maintainer TODO: implement JSON parsing and the complete v1 contract here.
-    Keep this function pure, preserve strings, and use the contract reason/path
-    pairs. The tests are executable requirements, not a source of runtime rules.
-    """
-    raise NotImplementedError("The maintainer must implement the core parser.")
+
+def _validate_fields(
+    value: dict[str, object], fields: tuple[str, ...], container_path: str
+) -> None:
+    prefix = "" if container_path == "$" else f"{container_path}."
+    for field in fields:
+        if field not in value:
+            raise BudgetBackupError(
+                "MISSING_PROPERTY", f"{prefix}{field}", "A required property is missing."
+            )
+    for field in value:
+        if field not in fields:
+            raise BudgetBackupError(
+                "UNEXPECTED_PROPERTY",
+                f"{prefix}{field}",
+                "The object contains an unexpected property.",
+                container_path=container_path,
+            )
+
+
+def parse_budget_backup(text: str) -> dict[str, object]:
+    """Validate only the supplied text, returning its parsed values unchanged."""
+    try:
+        document = json.loads(
+            text,
+            parse_int=float,
+            parse_float=float,
+            parse_constant=_reject_constant,
+        )
+    except json.JSONDecodeError:
+        raise BudgetBackupError(
+            "INVALID_JSON",
+            "$",
+            "The input must contain valid JSON.",
+        ) from None
+    except (RecursionError, MemoryError):
+        raise BudgetBackupError(
+            "INPUT_LIMIT", "$", "A parser resource limit prevented validation."
+        ) from None
+
+    if not isinstance(document, dict):
+        raise BudgetBackupError(
+            "INVALID_DOCUMENT", "$", "The backup must be a JSON object."
+        )
+    _validate_fields(document, DOCUMENT_FIELDS, "$")
+
+    version = document["formatVersion"]
+    if isinstance(version, bool) or not isinstance(version, (int, float)):
+        raise BudgetBackupError(
+            "INVALID_VERSION_TYPE", "formatVersion", "The version must be numeric."
+        )
+    if version != 1:
+        raise BudgetBackupError(
+            "UNSUPPORTED_VERSION", "formatVersion", "Only version 1 is supported."
+        )
+
+    month = document["month"]
+    if not isinstance(month, str) or re.fullmatch(
+        r"(?!0000)[0-9]{4}-(?:0[1-9]|1[0-2])", month
+    ) is None:
+        raise BudgetBackupError(
+            "INVALID_MONTH", "month", "Use YYYY-MM with a year from 0001 to 9999."
+        )
+
+    rows = document["rows"]
+    if not isinstance(rows, list):
+        raise BudgetBackupError("INVALID_ROWS_TYPE", "rows", "Rows must be an array.")
+    if len(rows) != 10:
+        raise BudgetBackupError(
+            "INVALID_ROW_COUNT", "rows", "The budget must contain exactly ten rows."
+        )
+
+    for index, row in enumerate(rows):
+        path = f"rows[{index}]"
+        if not isinstance(row, dict):
+            raise BudgetBackupError("INVALID_ROW_TYPE", path, "Each row must be an object.")
+        _validate_fields(row, ROW_FIELDS, path)
+        for field in ROW_FIELDS:
+            value = row[field]
+            if not isinstance(value, str):
+                raise BudgetBackupError(
+                    "INVALID_FIELD_TYPE", f"{path}.{field}", "Each row field must be a string."
+                )
+            if field != "item" and value != "" and (
+                AMOUNT_PATTERN.fullmatch(value) is None or not math.isfinite(float(value))
+            ):
+                raise BudgetBackupError(
+                    "INVALID_AMOUNT",
+                    f"{path}.{field}",
+                    "An amount must be empty or a finite nonnegative number string.",
+                )
+        if row["income"] != "" and row["spending"] != "":
+            raise BudgetBackupError(
+                "BOTH_AMOUNTS_SET", path, "A row cannot contain both income and spending."
+            )
+
+    return document
 
 
 def read_budget_backup(path: str | Path) -> dict[str, object]:
@@ -97,11 +191,6 @@ def main(argv: list[str] | None = None) -> int:
         path = error.container_path if error.reason == "UNEXPECTED_PROPERTY" else error.path
         print(f"{status} {error.reason} {path}: {error}", file=sys.stderr)
         return 2 if status == "ERROR" else 1
-    except NotImplementedError:
-        # Remove this temporary branch when the maintainer completes the parser.
-        print("ERROR NOT_IMPLEMENTED $: The core parser is still a scaffold.", file=sys.stderr)
-        return 2
-
     print("VALID")
     return 0
 

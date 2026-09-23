@@ -1,16 +1,15 @@
-# Python budget validator: learning scaffold
+# Python budget validator
 
-This is a **partial delivery for [issue #37](https://github.com/anton415/finance-lab/issues/37)**.
-The maintainer requested tests, documentation, and a scaffold so they can implement
-the core validator themselves. It is not yet a usable budget validator.
+The [module](../scripts/validate_budget_backup.py) validates one explicitly
+supplied local budget-backup file against the v1 contract. It contains the pure
+`parse_budget_backup(text)` function, a bounded file reader, a CLI, and the
+`__main__` guard. Importing it does not read files, inspect arguments, or print.
+The [tests](../tests/python/test_budget_backup.py) verify the shared contract and
+Python-specific behavior without third-party dependencies.
 
-The supplied [module](../scripts/validate_budget_backup.py) contains the error
-type, bounded local-file reader, CLI, and `__main__` guard.
-**Start with `parse_budget_backup(text)`: its `NotImplementedError` is the only
-implementation TODO.** The [tests](../tests/python/test_budget_backup.py) describe
-the required final behavior and deliberately fail wherever the parser is needed.
-They are not skipped or marked as expected failures. The issue and human learning
-check remain open.
+The technical implementation for [issue #37](https://github.com/anton415/finance-lab/issues/37)
+is complete. **The issue remains open for the human learning check** described
+below; passing tests and agent assistance do not complete that check.
 
 ## Setup
 
@@ -30,17 +29,18 @@ versioned executable for `-m venv`). No `pip install` or requirements file is
 needed. Activation is optional: `.venv/bin/python` invokes the environment
 directly. `.venv/` and Python bytecode are ignored by Git.
 
-The recorded scaffold run used **CPython 3.14.5 on macOS**, in a freshly created
+The recorded implementation verification used **CPython 3.14.5 on macOS**, in a
 virtual environment with no third-party packages installed. Other Python
 versions and operating systems have not been verified; the Linux setup above is
 provided but was not exercised. Windows setup is not covered here.
 
-## Your implementation steps
+## Validation flow
 
-Read the [authoritative v1 contract](budget-backup-contract.md) and its
-[manifest](../fixtures/budget-backup/v1/manifest.json). The current contract is
-unchanged from the issue's reviewed commit, `9eba924`. Use the tests to work
-through these steps in `parse_budget_backup`; small local helpers are optional.
+The [authoritative v1 contract](budget-backup-contract.md) and its
+[manifest](../fixtures/budget-backup/v1/manifest.json) define the validation rules
+and fixture expectations. The contract is unchanged from the issue's reviewed
+commit, `9eba924`.
+`parse_budget_backup` follows these steps:
 
 1. Parse the supplied text using `json.loads`. Reject bare `NaN`, `Infinity`, and
    `-Infinity` with a rejecting `parse_constant` callback. Use ordinary binary64
@@ -62,10 +62,6 @@ through these steps in `parse_budget_backup`; small local helpers are optional.
    Check exclusivity by string emptiness, so two zero strings are rejected.
    Return the parsed document without trimming, rounding, repairing, sorting,
    calculating totals, or replacing its values.
-5. Run all tests and the CLI examples. Once the parser works, remove the temporary
-   `NotImplementedError` handler in `main`, the scaffold notices in the module and
-   help, and update this guide's implementation status with your actual results.
-   Keep the human check pending until you supply its evidence.
 
 The parser must not read files, consult fixture expectations at runtime, call
 Node/TypeScript, access storage/network/clock, print, or execute input text.
@@ -100,7 +96,7 @@ relative `./` prefix. File extensions do not determine validity.
 
 ## Commands and exit statuses
 
-After implementing the parser, run from the repository root:
+Run from the repository root:
 
 ```bash
 python scripts/validate_budget_backup.py fixtures/budget-backup/v1/valid/mixed.json
@@ -111,24 +107,18 @@ python scripts/validate_budget_backup.py --help
 Run `echo $?` immediately after an invocation to inspect its exit status in a
 shell. Relative paths resolve against the caller's working directory.
 
-| Final behavior | Exit | stdout | stderr |
+| Behavior | Exit | stdout | stderr |
 | --- | --- | --- | --- |
 | Valid backup | 0 | `VALID` and a newline | Empty |
 | `-h` / `--help` | 0 | Static help | Empty |
 | Encoding, size, parsing, resource limit, or contract rejection | 1 | Empty | One `INVALID reason location: message` line |
 | Invalid arguments or missing/unreadable/non-file input | 2 | Empty | One `ERROR reason $: message` line |
 
-The invalid example must eventually return `1` with `BOTH_AMOUNTS_SET rows[0]`.
+The invalid example returns `1` with `BOTH_AMOUNTS_SET rows[0]`.
 That is a successful negative check. Boundary reasons are `INVALID_ENCODING`,
 `FILE_TOO_LARGE`, `INPUT_LIMIT`, `UNREADABLE_FILE`, and `USAGE_ERROR`, all at `$`.
 Only the first error is required; error ordering for multiple defects is not
 promised.
-
-**Current scaffold behavior:** both supplied valid/invalid example files reach
-the TODO and return `2`, stdout empty, with
-`ERROR NOT_IMPLEMENTED $: The core parser is still a scaffold.` on stderr.
-This temporary status is not a claim of validation or a final contract reason.
-Help already returns `0` on stdout with empty stderr.
 
 ## Verification
 
@@ -150,17 +140,17 @@ fields and row 10, preservation, inert text, reader limits, safe CLI streams, an
 side-effect-free import. Permission and parser-resource failures are simulated
 with `unittest.mock`; large byte-limit inputs exist only in temporary files.
 
-Observed scaffold baseline on CPython 3.14.5:
+Observed results on CPython 3.14.5:
 
-- The suite discovers **37 test methods**: 12 pass; the 25 parser-dependent methods
-  remain red, reported as **10 failures and 322 errors** across their subtests.
-  All 322 errors are the deliberate `NotImplementedError`; the 10 failures are
-  final CLI expectations encountering the temporary scaffold status. No tests
-  are skipped. This is not a passing Python suite or Python/TypeScript agreement.
-- The manifest coverage check passes: currently 27 inputs, 3 valid and 24 invalid.
-  Python classifications remain unverified until the parser is implemented.
-- Both documented file examples were run: exit `2`, empty stdout, the temporary
-  diagnostic above on stderr. `--help`: exit `0`, static stdout, empty stderr.
+- All **37 test methods pass**, including their table-driven subtests; no tests
+  are skipped or marked as expected failures.
+- All 27 shared inputs agree with the manifest: 3 valid fixtures preserve parsed
+  values and 24 invalid fixtures match both reason and path. Manifest coverage,
+  uniqueness, and referenced file existence also pass.
+- The valid CLI example exits `0`, prints `VALID` and a newline on stdout, and
+  leaves stderr empty. The invalid example exits `1`, leaves stdout empty, and
+  prints `INVALID BOTH_AMOUNTS_SET rows[0]: A row cannot contain both income and spending.`
+  on stderr. `--help` exits `0` with static stdout and empty stderr.
 
 Existing application verification was also run:
 
@@ -173,12 +163,12 @@ npm run build
 Observed: **423 tests in 9 files passed**, including the TypeScript shared-fixture
 checks; lint and build exited `0`. These local checks used Node **22.19.0**, npm
 **10.9.3**, and the existing installed dependencies. Repository CI uses Node 24
-and `npm ci`; a clean Node 24 install was not tested in this scaffold run.
+and `npm ci`; a clean Node 24 install was not tested in this local run.
 The Python suite is a local command and has not been added to CI or npm scripts.
 PR-triggered checks must be read from GitHub; these local results do not predict
 their status.
 
-Passing the shared manifest in both implementations will demonstrate agreement
+Passing the shared manifest in both implementations demonstrates agreement
 on those examples, not equivalence for every JSON input or parser resource limit.
 Unique object names are a producer assumption; do not introduce a Python-only
 duplicate-key rule or a custom parser. The byte limit is not a hostile-input
@@ -213,6 +203,11 @@ assertion, or a missing edge-case test). Do not change the contract merely to
 create an exercise. Record your own contribution, exact command/results, and AI
 assistance before closing the issue.
 
-Contribution record: **Codex prepared the tests, file/CLI shell, and this guide.
-Maintainer parser implementation, independent change, explanation, and learning
-evidence are pending.** No human learning outcome or bug discovery is claimed.
+Contribution record: the maintainer wrote the initial JSON decoding with
+`parse_int=float` / `parse_float=float` and the `JSONDecodeError` translation.
+Codex prepared the original tests and file/CLI shell, reviewed that edit, and
+completed constant rejection, resource-limit handling, contract validation,
+return-value handling, documentation, and verification at the maintainer's request.
+**The full human learning check remains pending**, including evidence of
+substantial hands-on implementation/debugging, the control-flow explanation, and
+an independent tested change. No completed human learning outcome is claimed.
