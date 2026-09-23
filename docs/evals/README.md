@@ -115,6 +115,15 @@ budget, checks all empty September rows, and compares the original raw August
 value. This file also adds an A → B → A restoration test. Neither its historical
 solution nor the mutation below belongs in the agent-visible bundle.
 
+**Request alignment:** FL-CE-001 version 2 explicitly requires August 2026
+storage, an initially absent September 2026 key, and a September render. This
+matches the existing reference and mutation. Inspect that setup before grading;
+do not apply the hardcoded-August mutation to an unrelated month pair. The
+[version history](coding-agent-tasks.md#fl-ce-001) retains the broader v1 request
+and explains why a v1 setup/grader mismatch is not candidate failure. The dated
+control observations below are unchanged historical evidence, not a new run or
+an agent trial using the revised prompt.
+
 ### Reproduction (evaluator only)
 
 Run trusted manual calibration in a disposable copy, never in the delivery
@@ -234,19 +243,69 @@ Tasks share code and contracts, so their outcomes are correlated.
 
 ## Maintainer review and learning
 
-**Pending:** maintainer review of the requests/rubric and the personal learning
-check. Codex authored this catalogue and performed the manual calibration;
-these actions do not count as the maintainer's contribution. Do not close #38
-or claim the human check completed without their evidence.
+**Delegated follow-up, 2026-09-23:** the maintainer asked ChatGPT to implement
+the review follow-up instead of doing it personally. ChatGPT reviewed the task
+requests and rubric, revised FL-CE-001's request/outcomes, and authored the
+walkthrough below. Codex authored the original catalogue and performed the
+recorded manual calibration. These contributions must not be attributed to the
+maintainer or presented as an independent human review.
 
-The maintainer must personally write or revise one request and its outcome
-criteria derived from #15/#31, then record that contribution and AI assistance.
-Explain task, trial, grader, and outcome; why green application tests can miss
-bad coverage; which positive/negative controls establish discrimination; and
-how history could reveal the answer. Inspect the observed calibration and name
-one way its grader could mislead. For example, an unrelated failure or zero
-selected tests cannot establish detection; the maintainer must make their own
-assessment rather than adopting this example as proof of learning.
+**Still unverified:** the maintainer's personal learning check and independent
+review. Delegation supplies the technical correction and explanatory material;
+it does not demonstrate personal understanding, check a human-completion box,
+or silently waive #38's acceptance criterion. Keep that distinction in issue/PR
+status and do not close #38 as fully complete on this evidence alone.
+
+### AI-authored review and walkthrough
+
+The design review covers all 12 requests and their numbered grading plans:
+001–002 test discrimination/calendar identity; 003–005 validation; 006–007 export
+preservation; 008–009 read-only/asynchronous preview; 010–011 restore approval
+and failed-write preservation; 012 Python parsing parity. Apart from 001's
+corrected month constraint, no additional blocking request/grader mismatch was
+identified in this static review. This is not calibration of the other 11 tasks.
+
+| Rubric item | AI-assisted assessment of this documentation delivery |
+| --- | --- |
+| Scope discipline | Pass for the reviewed changes: evaluation documents and the root README only; no product, fixture, dependency, or CI changes. |
+| Test relevance | The recorded reference/no-op controls support the specific August/September case. Version 2 makes that case explicit. Broader grader behavior and the other 11 tasks remain unverified. |
+| Verification honesty | Historical implementation/calibration results remain attributed to Codex; this follow-up does not claim a new Vitest run, live-agent trial, or maintainer contribution. |
+
+For FL-CE-001, the **task** is the pinned source plus the request to improve
+month-isolation coverage without production edits. A **trial** would be one
+agent attempt from that prepared source; none is reported here. The **grader**
+combines valid-fixture/scope review, correct-versus-mutated execution, and raw
+storage-preservation checks. The **outcome** is the submitted test patch and
+its observed behavior, not a message saying the work succeeded.
+
+The original one-row August fixture is invalid for a loader that accepts ten
+rows. Reading either the absent September key or that invalid August value can
+therefore return empty rows. A green test can reflect fallback rejection rather
+than correct month selection. The corrected ten-row fixture gives a wrong-month
+read recognizable content, so the empty-September assertion can detect it.
+
+The reference must pass correct production and fail the intended wrong-month
+mutation. The original/no-op passing both shows why ordinary green tests are
+insufficient. An always-failing test fails correct production too; a skipped
+test executes no relevant assertion. Neither is useful detection. The recorded
+matrix supports this distinction only for the inspected controls.
+
+A grader can also mislead through its own setup: a candidate using October and
+November was allowed by v1, but a fixed August mutation could read an absent key
+and still return empty rows. Version 2 fixes the request/grader alignment rather
+than blaming that candidate. Unrelated compile errors or zero selected tests
+remain other reasons not to infer regression detection from an exit status.
+
+Later Git commits, solution PRs, evaluator notes, or cached patches can reveal
+the historical answer without solving the task. A future trial bundle must
+exclude them and protect grading outside the agent's context. Public-history
+removal does not establish that a model never encountered the source previously.
+
+To complete the original personal learning check later, the maintainer must
+personally write or revise a request and its outcomes, explain the distinctions
+above, assess a misleading-grader risk, and record their actual contribution
+and AI assistance. This walkthrough is study material, not a completed personal
+exercise or a first-person statement for the maintainer to adopt.
 
 No agent trial, provider account, SDK, new dependency, CI, benchmark score, or
 social publication is part of this delivery. Optional publication requires
