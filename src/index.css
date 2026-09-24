@@ -38,13 +38,23 @@ h1 {
   text-align: center;
 }
 
-button:focus-visible {
+button:focus-visible,
+summary:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
 
+.budget-tools {
+  margin-top: 1.5rem;
+}
+
+.budget-tools summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .budget-export {
-  margin-bottom: 1.5rem;
+  margin: 1.5rem 0;
 }
 
 .export-actions {

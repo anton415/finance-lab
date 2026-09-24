@@ -104,6 +104,7 @@ test('exports all ten selected rows in both formats through month A, B, and A ag
   storeRows('2026-10', october)
   localStorage.setItem('sample-unrelated-preference', 'keep')
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
 
   for (const { button, month, rows } of [
     { button: null, month: '2026-09', rows: september },
@@ -130,6 +131,7 @@ test('exports a direct edit from the selected December despite clock rollover, t
   storeRows('2026-12', december)
   storeRows('2027-01', january)
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   vi.setSystemTime(new Date(2027, 0, 1, 0, 1))
 
   const income = screen.getByLabelText('Income, row 1')
@@ -153,6 +155,7 @@ test('exports a direct edit from the selected December despite clock rollover, t
 
 test('exports an entirely empty selected month in both formats', () => {
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   const rows = Array.from({ length: 10 }, () => ({ item: '', income: '', spending: '' }))
 
   expectReadOnlyExport(() => exportBudget('CSV'))
@@ -169,6 +172,7 @@ test('repeated CSV exports never leak their item prefix into JSON, state, or sto
   storeRows('2026-09', rows)
   storeRows('2026-10', makeRows('unrelated month'))
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
 
   expectReadOnlyExport(() => exportBudget('CSV'))
   const firstCsv = lastDownload()
@@ -199,6 +203,7 @@ test.each(invalidSourceFixtures)('rejects $name in both formats with an accessib
   storeRows('2026-10', makeRows('unrelated month'))
   localStorage.setItem('sample-unrelated-preference', 'keep')
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
 
   for (const format of ['CSV', 'JSON'] as const) {
     expectReadOnlyExport(() => exportBudget(format))
@@ -215,6 +220,7 @@ test('clears a stale source error after an edit or a month change', () => {
   storeRows('2026-09', rows)
   storeRows('2026-10', makeRows('valid'))
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
 
   exportBudget('JSON')
   expect(screen.getByRole('alert')).toBeTruthy()
@@ -238,6 +244,7 @@ test('exports valid in-memory edits when storage is unavailable without reading 
   const remove = vi.spyOn(Storage.prototype, 'removeItem')
   const clear = vi.spyOn(Storage.prototype, 'clear')
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   fireEvent.change(screen.getByLabelText('Item, row 1'), { target: { value: 'Sample offline income' } })
   fireEvent.change(screen.getByLabelText('Income, row 1'), { target: { value: '25.50' } })
   read.mockClear()
@@ -263,6 +270,7 @@ test('shows a retryable download-setup error without mutation and clears it on s
   storeRows('2026-09', rows)
   storeRows('2026-10', makeRows('unrelated month'))
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   vi.mocked(downloadFile).mockImplementationOnce(() => {
     throw new Error('Synthetic download failure')
   })
@@ -278,6 +286,7 @@ test('shows a retryable download-setup error without mutation and clears it on s
 test('offers native named export buttons with keyboard activation', async () => {
   const user = userEvent.setup()
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   const csv = screen.getByRole('button', { name: 'Export CSV' })
   const json = screen.getByRole('button', { name: 'Export JSON' })
   expect(csv.tagName).toBe('BUTTON')
@@ -285,8 +294,7 @@ test('offers native named export buttons with keyboard activation', async () => 
   expect(json.tagName).toBe('BUTTON')
   expect(json.getAttribute('type')).toBe('button')
 
-  await user.tab()
-  await user.tab()
+  screen.getByText('Export and backup').focus()
   await user.tab()
   expect(document.activeElement).toBe(csv)
   await user.keyboard('{Enter}')

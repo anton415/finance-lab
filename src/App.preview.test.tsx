@@ -36,7 +36,9 @@ const renderStoredBudget = () => {
   localStorage.setItem('finance-lab:budget:2026-09', JSON.stringify(makeRows('September')))
   localStorage.setItem('finance-lab:budget:2026-10', JSON.stringify(makeRows('October')))
   localStorage.setItem('sample-unrelated-preference', 'keep exactly')
-  return render(<App />)
+  const app = render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
+  return app
 }
 
 const storageSnapshot = () => Object.fromEntries(
@@ -132,11 +134,33 @@ test('provides a labelled keyboard-accessible single-file input with preview lim
   expect(help).toMatch(/no budgets will be changed/i)
   expect(help).toMatch(/UTF-8/)
   expect(help).toMatch(/1 MiB/)
-  for (let index = 0; index < 5; index += 1) await user.tab()
+  screen.getByRole('button', { name: 'Export JSON' }).focus()
+  await user.tab()
   expect(document.activeElement).toBe(input)
   expect(clearButton()).toHaveProperty('type', 'button')
   expect(clearButton()).toHaveProperty('disabled', true)
   expect(screen.getByRole('button', { name: 'Restore backup…' })).toHaveProperty('disabled', true)
+})
+
+test('keeps the selected preview and budget unchanged when the file section is collapsed and reopened', async () => {
+  const user = userEvent.setup()
+  renderStoredBudget()
+  const input = fileInput()
+  const file = backupFile(mixedFixture)
+  selectFile(file)
+  await expectPreview(mixedFixture)
+  const assertReadOnly = observeReadOnly()
+  const summary = screen.getByText('Export and backup')
+
+  await user.click(summary)
+  expect(summary.closest('details')).toHaveProperty('open', false)
+  await user.click(summary)
+  expect(summary.closest('details')).toHaveProperty('open', true)
+
+  expect(fileInput()).toBe(input)
+  expect(input.files?.[0]).toBe(file)
+  await expectPreview(mixedFixture)
+  assertReadOnly()
 })
 
 test.each([

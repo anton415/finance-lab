@@ -60,7 +60,9 @@ const setup = () => {
   localStorage.setItem(october, JSON.stringify(makeRows('October')))
   localStorage.setItem('finance-lab:budget:2028-02', '  [sample untouched data] ')
   localStorage.setItem('sample-preference', 'keep exactly')
-  return render(<StrictMode><App /></StrictMode>)
+  const app = render(<StrictMode><App /></StrictMode>)
+  fireEvent.click(screen.getByText('Export and backup'))
+  return app
 }
 
 const storageSnapshot = () => Object.fromEntries(Object.keys(localStorage).sort().map(
@@ -143,6 +145,7 @@ test.each([
   localStorage.setItem(key, JSON.stringify(approved.rows))
   localStorage.setItem('sample-preference', 'keep exactly')
   const app = render(<StrictMode><App /></StrictMode>)
+  fireEvent.click(screen.getByText('Export and backup'))
   navigate(offset)
   expect(exported()).toEqual(approved)
   const download = vi.mocked(downloadFile).mock.calls.at(-1)![0]
@@ -164,6 +167,7 @@ test.each([
 
   app.unmount()
   render(<App />)
+  fireEvent.click(screen.getByText('Export and backup'))
   expect(screen.getByText('September 2026')).toBeTruthy()
   navigate(offset)
   expect(exported()).toEqual(approved)
@@ -358,6 +362,7 @@ test('double activation consumes approval once and clears stale export errors', 
   badRows[0].spending = '1'
   localStorage.setItem(september, JSON.stringify(badRows))
   render(<StrictMode><App /></StrictMode>)
+  fireEvent.click(screen.getByText('Export and backup'))
   fireEvent.click(screen.getByRole('button', { name: 'Export JSON' }))
   expect(screen.getByRole('alert')).toBeTruthy()
   await choose()
