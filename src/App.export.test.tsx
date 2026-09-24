@@ -285,8 +285,7 @@ test('offers native named export buttons with keyboard activation', async () => 
   expect(json.tagName).toBe('BUTTON')
   expect(json.getAttribute('type')).toBe('button')
 
-  await user.tab()
-  await user.tab()
+  screen.getByLabelText('Spending, row 10').focus()
   await user.tab()
   expect(document.activeElement).toBe(csv)
   await user.keyboard('{Enter}')

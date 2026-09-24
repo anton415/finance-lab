@@ -60,6 +60,25 @@ test('provides ten editable budget rows', () => {
   expect(screen.getAllByRole('spinbutton', { name: /spending, row/i })).toHaveLength(10)
 })
 
+test('keyboard entry follows month navigation, with file controls after the budget', async () => {
+  const user = renderBudget()
+
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Previous month' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next month' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByLabelText('Item, row 1'))
+
+  screen.getByLabelText('Spending, row 10').focus()
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Export CSV' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Export JSON' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByLabelText('Choose JSON backup'))
+})
+
 test('adds income to total income and balance', async () => {
   const user = renderBudget()
 

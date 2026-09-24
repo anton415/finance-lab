@@ -112,28 +112,6 @@ function App() {
         <button type="button" onClick={() => changeMonth(1)}>Next month</button>
       </div>
 
-      <div className="budget-export">
-        <div className="export-actions">
-          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('csv')}>
-            Export CSV
-          </button>
-          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('json')}>
-            Export JSON
-          </button>
-        </div>
-        <p id="export-help">
-          CSV is for inspection; nonempty item text gets an apostrophe prefix for spreadsheet handling.
-          {' '}JSON is a lossless backup.
-        </p>
-        {exportError && <p role="alert">{exportError}</p>}
-      </div>
-
-      <BudgetBackupPreview
-        budgetContext={budget}
-        onRestored={showRestoredBudget}
-        onRestoreActivity={() => setRestoreNotice(null)}
-      />
-
       <table>
         <thead>
           <tr>
@@ -199,6 +177,28 @@ function App() {
           </dd>
         </div>
       </dl>
+
+      <div className="budget-export">
+        <div className="export-actions">
+          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('csv')}>
+            Export CSV
+          </button>
+          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('json')}>
+            Export JSON
+          </button>
+        </div>
+        <p id="export-help">
+          CSV is for inspection; nonempty item text gets an apostrophe prefix for spreadsheet handling.
+          {' '}JSON is a lossless backup.
+        </p>
+        {exportError && <p role="alert">{exportError}</p>}
+      </div>
+
+      <BudgetBackupPreview
+        budgetContext={budget}
+        onRestored={showRestoredBudget}
+        onRestoreActivity={() => setRestoreNotice(null)}
+      />
     </main>
   )
 }

@@ -44,7 +44,7 @@ button:focus-visible {
 }
 
 .budget-export {
-  margin-bottom: 1.5rem;
+  margin: 1.5rem 0;
 }
 
 .export-actions {
