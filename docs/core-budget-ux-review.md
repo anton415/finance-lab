@@ -40,8 +40,8 @@ Evidence → At the top of the page, the table started approximately 413 px down
 on desktop and 488 px on narrow; totals started approximately 965 px down on
 narrow, outside the initial viewport. Tab after Next month focused Export CSV;
 Export JSON and Choose JSON backup also preceded the first item field.
-Candidate improvement → Move the existing export and backup controls below the
-budget table and totals, in both document and visual order.
+Candidate improvement → Group the existing export and backup controls below the
+budget table and totals in a section users can expand when needed.
 
 **Minor — item descriptions are clipped on the narrow screen.**
 
@@ -61,17 +61,19 @@ budget; this change makes the month → rows → totals sequence clearer and eas
 to reach without changing the finance model.
 
 There was no blocking finding. The one high-friction finding affects both widths
-and keyboard entry, and can be addressed by moving existing markup. The minor
-label limitation is deferred.
+and keyboard entry, and can be addressed by moving existing markup into a native
+disclosure. The minor label limitation is deferred.
 
 ## Implementation and after verification
 
-Moved the existing export block and backup-preview component after the totals in
-`src/App.tsx`, with a top margin to separate the file controls from the totals.
+Grouped the existing export block and backup-preview component after the totals
+in a native `details` / `summary` section named **Export and backup**, collapsed
+by default. Its contents stay mounted, so collapsing preserves a selected preview.
 The handlers, ten-row table, calculations, persistence, and backup contracts are
-unchanged. Added a behavioral keyboard-order test and updated the two existing
-export/preview keyboard tests to enter the relocated controls from their preceding
-focusable element. No CSS-value or screenshot assertion was added.
+unchanged. Tests cover the disclosure state, entry order, preview retention, and
+absence of storage writes when toggling. Existing export/preview/restore tests
+now open the section before using its controls. No CSS-value or screenshot
+assertion was added.
 
 Repeated the browser smoke check in the same session at both widths:
 
@@ -83,8 +85,12 @@ Repeated the browser smoke check in the same session at both widths:
 | Tab after Next month | Export CSV | Item, row 1 |
 
 At both sizes all ten rows and the labeled totals now fit within the reviewed
-initial viewport. File controls remain below the totals. Tab from the last
-spending field reached Export CSV, Export JSON, and Choose JSON backup in order.
+initial viewport. Only the Export and backup summary is visible below the totals
+until expanded. Tab from the last spending field reaches the summary, then skips
+the hidden controls when closed. Enter opens the section, Space closes it, and
+the open section exposes Export CSV, Export JSON, and Choose JSON backup in order.
+Native keyboard activation and collapsed tab order were checked in the real
+browser because jsdom does not reproduce those behaviors.
 
 At each width, entered and cleared Sample supplies / spending 50, edited groceries
 from 250 to 25 and back, changed transport between income and spending, navigated
@@ -92,12 +98,19 @@ to October (its saved income remained 950), returned to September, and reloaded.
 The final totals remained 3,000 / 1,550 / 1,450. No horizontal page scrolling was
 needed. The narrow item-label clipping remains as recorded above.
 
+The final collapsed version was also checked at both widths: opening/closing
+preserved the same selected synthetic preview; both export formats downloaded;
+editing a budget and switching months worked with the section collapsed. On the
+narrow viewport, restored the synthetic January 2027 fixture and confirmed the
+restored income total (2,010.5) and focus returning to the budget heading. Reload
+returned to the saved current month with the section collapsed.
+
 ### Automated checks
 
 - `npm test -- src/App.test.tsx -t 'keyboard entry follows month navigation'`:
   the new test failed on the original layout (Export CSV received focus instead
   of the first item), then passed after the change (1 passed, 20 skipped).
-- `npm test`: final run passed all 424 tests across 9 files, including totals,
+- `npm test`: final run passed all 425 tests across 9 files, including totals,
   navigation, persistence, export, preview, and restore coverage. The first full
   run identified two tests expecting the previous tab order; those expectations
   were updated as described above, retaining their activation/input checks.

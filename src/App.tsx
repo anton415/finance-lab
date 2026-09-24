@@ -178,27 +178,30 @@ function App() {
         </div>
       </dl>
 
-      <div className="budget-export">
-        <div className="export-actions">
-          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('csv')}>
-            Export CSV
-          </button>
-          <button type="button" aria-describedby="export-help" onClick={() => exportBudget('json')}>
-            Export JSON
-          </button>
+      <details className="budget-tools">
+        <summary>Export and backup</summary>
+        <div className="budget-export">
+          <div className="export-actions">
+            <button type="button" aria-describedby="export-help" onClick={() => exportBudget('csv')}>
+              Export CSV
+            </button>
+            <button type="button" aria-describedby="export-help" onClick={() => exportBudget('json')}>
+              Export JSON
+            </button>
+          </div>
+          <p id="export-help">
+            CSV is for inspection; nonempty item text gets an apostrophe prefix for spreadsheet handling.
+            {' '}JSON is a lossless backup.
+          </p>
+          {exportError && <p role="alert">{exportError}</p>}
         </div>
-        <p id="export-help">
-          CSV is for inspection; nonempty item text gets an apostrophe prefix for spreadsheet handling.
-          {' '}JSON is a lossless backup.
-        </p>
-        {exportError && <p role="alert">{exportError}</p>}
-      </div>
 
-      <BudgetBackupPreview
-        budgetContext={budget}
-        onRestored={showRestoredBudget}
-        onRestoreActivity={() => setRestoreNotice(null)}
-      />
+        <BudgetBackupPreview
+          budgetContext={budget}
+          onRestored={showRestoredBudget}
+          onRestoreActivity={() => setRestoreNotice(null)}
+        />
+      </details>
     </main>
   )
 }

@@ -62,6 +62,10 @@ test('provides ten editable budget rows', () => {
 
 test('keyboard entry follows month navigation, with file controls after the budget', async () => {
   const user = renderBudget()
+  const summary = screen.getByText('Export and backup')
+  const details = summary.closest('details')!
+
+  expect(details.open).toBe(false)
 
   await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Previous month' }))
@@ -72,11 +76,19 @@ test('keyboard entry follows month navigation, with file controls after the budg
 
   screen.getByLabelText('Spending, row 10').focus()
   await user.tab()
+  expect(document.activeElement).toBe(summary)
+  // Browser smoke covers native summary keyboard activation and collapsed tab order.
+  await user.click(summary)
+  expect(details.open).toBe(true)
+  await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Export CSV' }))
   await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Export JSON' }))
   await user.tab()
   expect(document.activeElement).toBe(screen.getByLabelText('Choose JSON backup'))
+
+  await user.click(summary)
+  expect(details.open).toBe(false)
 })
 
 test('adds income to total income and balance', async () => {
