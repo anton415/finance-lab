@@ -1,0 +1,56 @@
+name: PR lifecycle
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, converted_to_draft, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  decide:
+    # Preserve the accepted read-only behavior until a human configures rollout.
+    if: vars.LIFECYCLE_PROJECT_ID == ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Execute only trusted automation, including for fork PRs.
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Log intended lifecycle state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/workflow_controller.py
+
+  apply:
+    if: vars.LIFECYCLE_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    concurrency:
+      group: pr-lifecycle-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Never check out a PR head in this write-capable job.
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply required lifecycle changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.LIFECYCLE_PROJECT_TOKEN }}
+          LIFECYCLE_PROJECT_ID: ${{ vars.LIFECYCLE_PROJECT_ID }}
+          LIFECYCLE_DONE_OWNER: ${{ vars.LIFECYCLE_DONE_OWNER }}
+        run: python -m scripts.workflow_live
