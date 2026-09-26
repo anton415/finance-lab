@@ -240,8 +240,11 @@ def apply_decision(evidence, repository, project, done_owner, api):
         add_review = "needs:review" in desired - current
         status = evidence["intended_status"]
         manage_status = status != "Done" or done_owner == "controller"
-        if manage_status and status not in state["options"]:
-            raise ReadFailure("status_validation")
+        if manage_status:
+            matches = [name for name in state["options"] if name.casefold() == status.casefold()]
+            if len(matches) != 1:
+                raise ReadFailure("status_validation")
+            status = matches[0]
         if add_review and not state["review_id"]:
             raise ReadFailure("workflow_label_lookup")
         update_status = manage_status and state["status"] != state["options"][status]

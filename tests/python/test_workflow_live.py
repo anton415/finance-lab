@@ -95,6 +95,23 @@ class ApplyTests(unittest.TestCase):
                 apply(CASES[1], api)
                 self.assertEqual([call[0] for call in api.calls[1:]], operations)
 
+    def test_draft_with_case_variant_status_only_removes_label_and_retry_is_noop(self):
+        state = snapshot("In progress")
+        state["options"]["In Progress"] = state["options"].pop("In progress")
+        api = FakeGitHub(state)
+        result = apply(CASES[0], api)
+        self.assertEqual(result["outcome"], "updated")
+        self.assertEqual(result["writes"], ["remove_workflow_labels"])
+        self.assertEqual([call[0] for call in api.calls], ["read", "remove"])
+        self.assertEqual(api.state["status"], state["status"])
+        self.assertEqual(api.state["options"], state["options"])
+        self.assertEqual(set(api.state["labels"]), {"learning"})
+        api.calls.clear()
+        again = apply(CASES[0], api)
+        self.assertEqual(again["outcome"], "no-op")
+        self.assertEqual(again["writes"], [])
+        self.assertEqual([call[0] for call in api.calls], ["read"])
+
     def test_replace_conflicting_labels_removes_before_adding_and_preserves_metadata(self):
         api = FakeGitHub(snapshot(labels=("learning", "needs:human", "needs:spec", "needs:custom")))
         result = apply(CASES[1], api)
@@ -309,6 +326,37 @@ class ApiTests(unittest.TestCase):
         for data in malformed:
             with self.subTest(data=data):
                 self.assert_read_failure([issue_data(), data], "status_validation")
+
+    def test_status_exact_and_case_variant_names_use_the_project_option_id(self):
+        for name in ("In progress", "In Progress"):
+            with self.subTest(name=name):
+                project = project_data()
+                project["project"]["field"]["options"] = [
+                    {"name": name, "id": "option_from_project"},
+                ]
+                replies = [issue_data(), project,
+                           {"removeLabelsFromLabelable": {"labelable": {"id": "I_synthetic"}}},
+                           {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": "PVTI_synthetic"}}}]
+                with patch.object(live, "graphql", side_effect=replies) as api:
+                    result = apply(CASES[0], live.GitHub())
+                self.assertEqual(result["outcome"], "updated")
+                self.assertEqual(result["intended_status"], "In progress")
+                self.assertEqual(result["writes"], ["remove_workflow_labels", "set_status"])
+                self.assertEqual(api.call_count, 4)
+                self.assertEqual(api.call_args.args, (live.STATUS_MUTATION, {"input": {
+                    "projectId": PROJECT, "itemId": "PVTI_synthetic", "fieldId": "PVTSSF_synthetic",
+                    "value": {"singleSelectOptionId": "option_from_project"},
+                }}))
+                self.assertEqual(api.call_args.kwargs, {"project": True})
+
+    def test_missing_or_case_ambiguous_status_option_fails_before_mutation(self):
+        for names in (("Ready",), ("Review", "REVIEW"), ("REVIEW", "Review")):
+            with self.subTest(names=names):
+                project = project_data()
+                project["project"]["field"]["options"] = [
+                    {"name": name, "id": f"option_{index}"} for index, name in enumerate(names)
+                ]
+                self.assert_read_failure([issue_data(), project], "status_validation")
 
     def test_partial_read_failure_or_repeated_cursor_does_not_write(self):
         page = project_data(connection([project_item()], True, "next"))
