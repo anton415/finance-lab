@@ -22,7 +22,7 @@ For an action, all reads and configuration checks finish before any mutation:
 1. Calculate desired workflow labels from the dry-run intent.
 2. If that would leave multiple `needs:*` labels, log a no-op requiring human
    correction. Do not choose an arbitrary label to keep.
-3. Remove only obsolete workflow labels, in one mutation.
+3. Remove only obsolete workflow labels, with one REST request per label.
 4. Set Status only when needed and owned by this adapter.
 5. Add `needs:review` only when missing, after conflicting labels are removed.
 
@@ -73,10 +73,16 @@ rerun a still-relevant event after adding the item.
 ## Permissions and trusted code
 
 The live job uses `GITHUB_TOKEN` with `contents: read`, `pull-requests: read`, and
-`issues: write`. That token resolves relationships and reads/updates labels.
+`issues: write`. That token resolves relationships and reads labels through
+GraphQL. Label writes use the [issue-label REST API](https://docs.github.com/en/rest/issues/labels):
+`DELETE /repos/{owner}/{repo}/issues/{number}/labels/{name}` removes each obsolete
+workflow label; `POST /repos/{owner}/{repo}/issues/{number}/labels` adds only
+`needs:review`. Other labels are preserved. The workflow supplies this repository
+token as `GH_TOKEN`; `PROJECT_TOKEN` is removed from label subprocess environments.
 There is no repository-content write, PR write, Actions write, or merge permission.
 
-Project requests use only `LIFECYCLE_PROJECT_TOKEN`. Prefer a fine-grained token
+Project reads and Status writes stay on GraphQL using only `LIFECYCLE_PROJECT_TOKEN`.
+Prefer a fine-grained token
 limited to the repository, with **Issues: read** and the owning user's or
 organization's **Projects: read and write** permission. Select only the Project
 where the token UI supports that restriction. No Contents, Pull requests, or
@@ -88,8 +94,14 @@ Never put a token in a command argument, fixture, log, or PR comment.
 Both jobs explicitly check out trusted `main` with persisted Git credentials
 disabled. They execute no PR-head code or artifacts and install no repository
 dependencies. Credentials are passed only to the relevant execution step. API
-queries use fixed GraphQL documents and JSON variables through stdin, without a
-shell. Logs retain the dry-run trace and add `outcome` and confirmed `writes`;
+queries use fixed GraphQL documents and JSON variables through stdin. Label REST
+calls use argument arrays, URL-encoded label names and JSON bodies through stdin;
+no shell is used. A successful REST response must contain a valid label list
+confirming the requested removal or addition. A 404, malformed response or
+uncertain result stops further writes; the next delivery rereads state, including
+any labels removed before a later request failed. `remove_workflow_labels` is
+recorded only after all requested removals are confirmed.
+Logs retain the dry-run trace and add `outcome` and confirmed `writes`;
 raw API responses/errors, label names, and PR text are not logged.
 
 Read failures include a fixed `diagnostic` code and a sanitized `reason`:

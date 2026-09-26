@@ -335,14 +335,14 @@ class ApiTests(unittest.TestCase):
                     {"name": name, "id": "option_from_project"},
                 ]
                 replies = [issue_data(), project,
-                           {"removeLabelsFromLabelable": {"labelable": {"id": "I_synthetic"}}},
                            {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": "PVTI_synthetic"}}}]
-                with patch.object(live, "graphql", side_effect=replies) as api:
+                with patch.object(live, "graphql", side_effect=replies) as api, \
+                        patch.object(live, "label_rest", return_value={"learning"}):
                     result = apply(CASES[0], live.GitHub())
                 self.assertEqual(result["outcome"], "updated")
                 self.assertEqual(result["intended_status"], "In progress")
                 self.assertEqual(result["writes"], ["remove_workflow_labels", "set_status"])
-                self.assertEqual(api.call_count, 4)
+                self.assertEqual(api.call_count, 3)
                 self.assertEqual(api.call_args.args, (live.STATUS_MUTATION, {"input": {
                     "projectId": PROJECT, "itemId": "PVTI_synthetic", "fieldId": "PVTSSF_synthetic",
                     "value": {"singleSelectOptionId": "option_from_project"},
@@ -364,33 +364,38 @@ class ApiTests(unittest.TestCase):
             self.assert_read_failure([issue_data(), page, failure], diagnostic)
 
     def test_exact_mutation_targets_and_separate_credentials(self):
-        replies = [issue_data(), project_data(),
-                   {"removeLabelsFromLabelable": {"labelable": {"id": "I_synthetic"}}},
-                   {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": "PVTI_synthetic"}}},
-                   {"addLabelsToLabelable": {"labelable": {"id": "I_synthetic"}}}]
+        replies = [gh_result({"data": issue_data()}), gh_result({"data": project_data()}),
+                   gh_result([{"name": "learning"}]),
+                   gh_result({"data": {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": "PVTI_synthetic"}}}}),
+                   gh_result([{"name": "learning"}, {"name": "needs:review"}])]
         env = {"GH_TOKEN": "REPO_TOKEN_SYNTHETIC", "PROJECT_TOKEN": "PROJECT_TOKEN_SYNTHETIC"}
         with patch.dict(live.os.environ, env, clear=True):
-            with patch.object(live.subprocess, "run", side_effect=[
-                gh_result({"data": data}) for data in replies
-            ]) as run:
+            with patch.object(live.subprocess, "run", side_effect=replies) as run:
                 result = apply(CASES[1], live.GitHub())
         self.assertEqual(result["outcome"], "updated")
+        self.assertEqual(result["writes"], ["remove_workflow_labels", "set_status", "add_needs_review"])
         calls = run.call_args_list
         self.assertEqual([call.kwargs["env"]["GH_TOKEN"] for call in calls],
                          [env["GH_TOKEN"], env["PROJECT_TOKEN"], env["GH_TOKEN"],
                           env["PROJECT_TOKEN"], env["GH_TOKEN"]])
         for call in calls:
-            self.assertEqual(call.args[0], ["gh", "api", "graphql", "--input", "-"])
             self.assertNotIn("shell", call.kwargs)
             self.assertNotIn("PROJECT_TOKEN", call.kwargs["env"])
-            self.assertNotIn("TOKEN", call.kwargs["input"])
-        inputs = [json.loads(call.kwargs["input"])["variables"] for call in calls]
-        self.assertEqual(inputs[2], {"input": {"labelableId": "I_synthetic", "labelIds": ["L_1"]}})
-        self.assertEqual(inputs[3], {"input": {
+            self.assertNotIn("TOKEN", call.kwargs["input"] or "")
+        for index in (0, 1, 3):
+            self.assertEqual(calls[index].args[0], ["gh", "api", "graphql", "--input", "-"])
+        self.assertEqual(calls[2].args[0], ["gh", "api", "--method", "DELETE",
+                         f"repos/{REPOSITORY}/issues/23/labels/needs%3Aimplementation"])
+        self.assertIsNone(calls[2].kwargs["input"])
+        self.assertEqual(json.loads(calls[3].kwargs["input"])["variables"], {"input": {
             "projectId": PROJECT, "itemId": "PVTI_synthetic", "fieldId": "PVTSSF_synthetic",
             "value": {"singleSelectOptionId": "3"},
         }})
-        self.assertEqual(inputs[4], {"input": {"labelableId": "I_synthetic", "labelIds": ["L_review"]}})
+        self.assertEqual(calls[4].args[0], ["gh", "api", "--method", "POST",
+                         f"repos/{REPOSITORY}/issues/23/labels", "--input", "-"])
+        self.assertEqual(json.loads(calls[4].kwargs["input"]), {"labels": ["needs:review"]})
+        for index in (2, 4):
+            self.assertNotIn(env["PROJECT_TOKEN"], calls[index].kwargs["env"].values())
 
     def test_api_errors_are_sanitized(self):
         failures = [
@@ -405,14 +410,94 @@ class ApiTests(unittest.TestCase):
                 with self.assertRaisesRegex(LookupError, "^GitHub API operation failed.$"):
                     live.graphql(live.ISSUE_QUERY, {})
 
-    def test_missing_or_wrong_mutation_receipt_stops_remaining_writes(self):
-        for receipt in ({}, {"removeLabelsFromLabelable": None},
-                        {"removeLabelsFromLabelable": {"labelable": {"id": "I_other"}}}):
-            with patch.object(live, "graphql", side_effect=[issue_data(), project_data(), receipt]) as api:
+    def test_failed_or_invalid_label_receipts_stop_remaining_writes(self):
+        failures = [
+            subprocess.CalledProcessError(1, "gh", output=SENTINEL, stderr="HTTP 404 " + SENTINEL),
+            subprocess.TimeoutExpired("gh", 30, output=SENTINEL), OSError(SENTINEL),
+            gh_result({"message": SENTINEL}), gh_result(None), gh_result([{}]),
+            gh_result([{"name": None}]), gh_result([{"name": ""}]), gh_result([SENTINEL]),
+            subprocess.CompletedProcess([], 0, stdout=SENTINEL),
+            gh_result([{"name": "needs:implementation"}]),
+        ]
+        for failure in failures:
+            with self.subTest(failure=type(failure).__name__):
+                replies = [gh_result({"data": issue_data()}), gh_result({"data": project_data()}), failure]
+                with patch.object(live.subprocess, "run", side_effect=replies) as run:
+                    result = apply(CASES[1], live.GitHub())
+                self.assertEqual(result["outcome"], "error")
+                self.assertEqual(result["writes"], [])
+                self.assertEqual(result["reason"], "Write failed or response is uncertain; rerun to read current state.")
+                self.assertNotIn(SENTINEL, json.dumps(result))
+                self.assertEqual(run.call_count, 3)
+
+    def test_add_review_requires_confirmation_in_rest_response(self):
+        issue = issue_data(connection([{"name": "learning", "id": "L_meta"}]))
+        project = project_data()
+        project["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = {"optionId": "3"}
+        for receipt in ([], [{"name": "learning"}]):
+            with patch.object(live.subprocess, "run", side_effect=[
+                gh_result({"data": issue}), gh_result({"data": project}), gh_result(receipt),
+            ]) as run:
                 result = apply(CASES[1], live.GitHub())
             self.assertEqual(result["outcome"], "error")
             self.assertEqual(result["writes"], [])
-            self.assertEqual(api.call_count, 3)
+            self.assertEqual(run.call_count, 3)
+            self.assertEqual(run.call_args.args[0][3], "POST")
+
+    def test_partial_rest_removal_retry_rereads_labels_and_preserves_descriptive_labels(self):
+        for accepted in (False, True):
+            with self.subTest(uncertain_removal_accepted=accepted):
+                labels = {"learning", "needs:human", "needs:spec /?"}
+                mutations, fail_once = [], True
+                project = project_data()
+                project["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = {"optionId": "3"}
+
+                def respond(command, **kwargs):
+                    nonlocal fail_once
+                    if command[2] == "graphql":
+                        query = json.loads(kwargs["input"])["query"]
+                        if query == live.ISSUE_QUERY:
+                            return gh_result({"data": issue_data(connection([
+                                {"name": name, "id": f"L_{index}"} for index, name in enumerate(sorted(labels))
+                            ]))})
+                        self.assertEqual(query, live.PROJECT_QUERY)
+                        return gh_result({"data": project})
+                    method, path = command[3:5]
+                    mutations.append((method, path))
+                    if method == "DELETE":
+                        if path.endswith("needs%3Ahuman"):
+                            labels.remove("needs:human")
+                        else:
+                            self.assertTrue(path.endswith("needs%3Aspec%20%2F%3F"))
+                            if fail_once:
+                                fail_once = False
+                                if accepted:
+                                    labels.remove("needs:spec /?")
+                                raise subprocess.CalledProcessError(1, command, stderr=SENTINEL)
+                            labels.remove("needs:spec /?")
+                    else:
+                        self.assertEqual(method, "POST")
+                        self.assertEqual(labels, {"learning"})
+                        self.assertEqual(json.loads(kwargs["input"]), {"labels": ["needs:review"]})
+                        labels.add("needs:review")
+                    return gh_result([{"name": name} for name in sorted(labels)])
+
+                with patch.object(live.subprocess, "run", side_effect=respond):
+                    failed = apply(CASES[1], live.GitHub())
+                    self.assertEqual(failed["outcome"], "error")
+                    self.assertNotIn(SENTINEL, json.dumps(failed))
+                    self.assertEqual(len(mutations), 2)
+                    self.assertEqual(labels, {"learning"} if accepted else {"learning", "needs:spec /?"})
+                    mutations.clear()
+                    retried = apply(CASES[1], live.GitHub())
+                    self.assertEqual(retried["outcome"], "updated")
+                    self.assertEqual([method for method, _ in mutations], ["POST"] if accepted else ["DELETE", "POST"])
+                    self.assertEqual(labels, {"learning", "needs:review"})
+                    mutations.clear()
+                    again = apply(CASES[1], live.GitHub())
+                    self.assertEqual(again["outcome"], "no-op")
+                    self.assertEqual(again["writes"], [])
+                    self.assertEqual(mutations, [])
 
 
 class CliTests(unittest.TestCase):
@@ -439,6 +524,28 @@ class CliTests(unittest.TestCase):
         self.assertNotIn(SENTINEL, output.getvalue())
         self.assertEqual(errors.getvalue(), "")
         return code, json.loads(output.getvalue()), api
+
+    def test_draft_rest_removal_leaves_satisfied_status_unchanged_and_sanitizes_failure(self):
+        project = project_data()
+        project["project"]["field"]["options"][2]["name"] = "In Progress"
+        project["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = {"optionId": "2"}
+        for receipt, expected_code, writes in (
+            (gh_result([{"name": "learning"}]), 0, ["remove_workflow_labels"]),
+            (subprocess.CalledProcessError(1, "gh", output=SENTINEL, stderr=SENTINEL), 1, []),
+        ):
+            with patch.object(live.subprocess, "run", side_effect=[
+                gh_result({"data": issue_data()}), gh_result({"data": project}), receipt,
+            ]) as run:
+                code, result, _ = self.invoke(CASES[0], {"GH_TOKEN": "REPO_TOKEN_SYNTHETIC"}, api=live.GitHub())
+            self.assertEqual(code, expected_code)
+            self.assertEqual(result["outcome"], "updated" if expected_code == 0 else "error")
+            self.assertEqual(result["writes"], writes)
+            self.assertEqual(run.call_count, 3)
+            self.assertEqual(run.call_args.args[0], ["gh", "api", "--method", "DELETE",
+                             f"repos/{REPOSITORY}/issues/23/labels/needs%3Aimplementation"])
+            self.assertEqual(run.call_args.kwargs["env"]["GH_TOKEN"], "REPO_TOKEN_SYNTHETIC")
+            self.assertNotIn("PROJECT_TOKEN", run.call_args.kwargs["env"])
+            self.assertNotIn(SENTINEL, run.call_args.kwargs["env"].values())
 
     def test_safe_diagnostics_reach_cli_with_failure_exit_and_no_writes(self):
         issue, project = issue_data(), project_data()

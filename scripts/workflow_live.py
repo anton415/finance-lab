@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from urllib.parse import quote
 
 from scripts.workflow_controller import dry_run
 
@@ -54,16 +55,6 @@ mutation($input: UpdateProjectV2ItemFieldValueInput!) {
   updateProjectV2ItemFieldValue(input: $input) { projectV2Item { id } }
 }
 """
-REMOVE_LABELS = """
-mutation($input: RemoveLabelsFromLabelableInput!) {
-  removeLabelsFromLabelable(input: $input) { labelable { id } }
-}
-"""
-ADD_LABELS = """
-mutation($input: AddLabelsToLabelableInput!) {
-  addLabelsToLabelable(input: $input) { labelable { id } }
-}
-"""
 
 
 READ_FAILURES = {
@@ -108,6 +99,26 @@ def graphql(query, variables, *, project=False):
         if body.get("errors") or not isinstance(body["data"], dict):
             raise ValueError
         return body["data"]
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError):
+        raise LookupError("GitHub API operation failed.") from None
+
+
+def label_rest(method, path, payload=None):
+    """Mutate issue labels with the repository token and validate the receipt."""
+    env = os.environ.copy()
+    env.pop("PROJECT_TOKEN", None)
+    command = ["gh", "api", "--method", method, path]
+    if payload is not None:
+        command.extend(["--input", "-"])
+    try:
+        result = subprocess.run(
+            command, input=json.dumps(payload) if payload is not None else None,
+            env=env, text=True, capture_output=True, check=True, timeout=30,
+        )
+        labels = json.loads(result.stdout)
+        if not isinstance(labels, list):
+            raise ValueError
+        return {text_id(label["name"]) for label in labels}
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError):
         raise LookupError("GitHub API operation failed.") from None
 
@@ -188,18 +199,18 @@ class GitHub:
             value = item["fieldValueByName"]
             status = text_id(value["optionId"]) if value is not None else None
         return {
+            "repository": repository, "issue_number": number,
             "issue_id": issue_id, "labels": labels, "review_id": review_id,
             "item_id": item_id, "field_id": field_id, "options": options,
             "status": status,
         }
 
     def remove_labels(self, state, names):
-        data = graphql(REMOVE_LABELS, {"input": {
-            "labelableId": state["issue_id"],
-            "labelIds": [state["labels"][name] for name in names],
-        }})
-        if data["removeLabelsFromLabelable"]["labelable"]["id"] != state["issue_id"]:
-            raise LookupError
+        path = f"repos/{state['repository']}/issues/{state['issue_number']}/labels"
+        for name in names:
+            remaining = label_rest("DELETE", f"{path}/{quote(name, safe='')}")
+            if name in remaining:
+                raise LookupError
 
     def set_status(self, state, project, status):
         data = graphql(STATUS_MUTATION, {"input": {
@@ -211,10 +222,9 @@ class GitHub:
             raise LookupError
 
     def add_review(self, state):
-        data = graphql(ADD_LABELS, {"input": {
-            "labelableId": state["issue_id"], "labelIds": [state["review_id"]],
-        }})
-        if data["addLabelsToLabelable"]["labelable"]["id"] != state["issue_id"]:
+        path = f"repos/{state['repository']}/issues/{state['issue_number']}/labels"
+        labels = label_rest("POST", path, {"labels": ["needs:review"]})
+        if "needs:review" not in labels:
             raise LookupError
 
 
