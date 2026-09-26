@@ -20,6 +20,8 @@ a local backup with the standard-library CLI and run the shared-contract tests.
 
 See the [coding-agent evaluation guide](docs/evals/README.md) for candidate tasks
 and the manually calibrated month-isolation example.
+See the [PR lifecycle dry-run guide](docs/pr-lifecycle-dry-run.md) for event
+mapping, safe issue resolution, fixture evidence, and the human gate before writes.
 
 ## Codex Cloud PR reviews
 

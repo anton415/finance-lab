@@ -1,0 +1,62 @@
+[
+  {
+    "name": "opened draft",
+    "action": "opened", "draft": true, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": ["needs:implementation"], "clear_all": false, "resolution": "resolved"}
+  },
+  {
+    "name": "opened ready",
+    "action": "opened", "draft": false, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "ready for review",
+    "action": "ready_for_review", "draft": false, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "converted to draft",
+    "action": "converted_to_draft", "draft": true, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": ["needs:review", "needs:human"], "clear_all": false, "resolution": "resolved"}
+  },
+  {
+    "name": "reopened draft",
+    "action": "reopened", "draft": true, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": false, "resolution": "resolved"}
+  },
+  {
+    "name": "reopened ready",
+    "action": "reopened", "draft": false, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "merged close",
+    "action": "closed", "draft": false, "merged": true,
+    "issues": [23],
+    "expected": {"decision": "action", "status": "Done", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "unmerged close",
+    "action": "closed", "draft": false, "merged": false,
+    "issues": [23],
+    "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "resolved"}
+  },
+  {
+    "name": "no closing issue",
+    "action": "opened", "draft": false, "merged": false,
+    "issues": [],
+    "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "missing"}
+  },
+  {
+    "name": "multiple closing issues",
+    "action": "opened", "draft": false, "merged": false,
+    "issues": [23, 24],
+    "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "ambiguous"}
+  }
+]
