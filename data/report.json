@@ -33,7 +33,7 @@
       "additions": 30,
       "deletions": 0,
       "changed_files": 1,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -57,7 +57,7 @@
       "additions": 1316,
       "deletions": 30,
       "changed_files": 8,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -93,7 +93,7 @@
       "additions": 152,
       "deletions": 14,
       "changed_files": 3,
-      "ci_attempts": 1,
+      "ci_attempts": 4,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -117,7 +117,7 @@
       "additions": 132,
       "deletions": 6,
       "changed_files": 2,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -165,7 +165,7 @@
       "additions": 1462,
       "deletions": 59,
       "changed_files": 16,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -189,7 +189,7 @@
       "additions": 862,
       "deletions": 0,
       "changed_files": 5,
-      "ci_attempts": 1,
+      "ci_attempts": 3,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -201,7 +201,7 @@
       "additions": 1218,
       "deletions": 0,
       "changed_files": 3,
-      "ci_attempts": 1,
+      "ci_attempts": 3,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -213,7 +213,7 @@
       "additions": 232,
       "deletions": 29,
       "changed_files": 7,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
@@ -256,7 +256,7 @@
     },
     {
       "pr_number": 86,
-      "cycle_time_hours": "unknown",
+      "cycle_time_hours": 1.8544444444444443,
       "commits": 1,
       "additions": 288,
       "deletions": 7,
