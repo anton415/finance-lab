@@ -4,6 +4,7 @@
 [Python controller](../scripts/workflow_controller.py) to the
 [Status + needs:* contract](https://github.com/anton415/finance-lab/issues/81).
 It logs proposed changes only. It has no Project or label mutation path.
+The opt-in [live adapter](pr-lifecycle-live.md) consumes these same decisions.
 
 ## Event mapping
 
@@ -43,7 +44,7 @@ Partial API results are discarded. Invalid event payloads also fail safely.
 ## Evidence and retries
 
 Each invocation writes one JSON record to the **Log intended lifecycle state**
-step of the **PR lifecycle dry-run** workflow. Fields include:
+step of the **PR lifecycle** workflow while live configuration is absent. Fields include:
 
 - `event`, `action`, `run.id`, `run.attempt`, and `pr_number` for traceability;
 - `target.issue_number` and `target.resolution` for the resolved target or no-op;
@@ -58,12 +59,12 @@ or written. A no-op has null Status and empty label operations.
 The same event and relationship data produce the same decision. A rerun's
 attempt number changes only the trace fields. Relationship data is read anew,
 so an edited relationship is a changed input. There is no clock-dependent
-decision, automatic API retry, or persistent deduplication store. #82 will be
-responsible for reading current state and skipping already-satisfied writes.
+decision, automatic API retry, or persistent deduplication store. The live
+adapter reads current state and skips already-satisfied writes.
 
 ## Security boundary
 
-The [workflow](../.github/workflows/pr-lifecycle-dry-run.yml) handles
+The read-only job in the [workflow](../.github/workflows/pr-lifecycle.yml) handles
 `pull_request_target` with only `contents: read`, `pull-requests: read`, and
 `issues: read`. It explicitly checks out trusted `main`, disables persisted Git
 credentials, and executes no PR-head code or artifacts. The token is available
