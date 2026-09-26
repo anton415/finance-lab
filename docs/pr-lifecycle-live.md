@@ -13,6 +13,9 @@ relationship, then reads all issue labels and Project memberships. Only the
 existing, unarchived issue item in the configured Project is eligible. It reads
 the Project's `Status` field, available options, and the item's current value.
 It never adds an item, creates a field/option/label, or infers targets from PR text.
+Desired Status names match Project option names case-insensitively (for example,
+`In progress` matches `In Progress`); comparisons and writes use the actual option
+ID. Zero or multiple matches fail with `status_validation` before any mutation.
 
 For an action, all reads and configuration checks finish before any mutation:
 
