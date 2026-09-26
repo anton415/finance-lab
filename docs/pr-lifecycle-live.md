@@ -89,6 +89,23 @@ queries use fixed GraphQL documents and JSON variables through stdin, without a
 shell. Logs retain the dry-run trace and add `outcome` and confirmed `writes`;
 raw API responses/errors, label names, and PR text are not logged.
 
+Read failures include a fixed `diagnostic` code and a sanitized `reason`:
+
+| Diagnostic | Failed stage |
+| --- | --- |
+| `repository_read` | Repository issue/label query, response validation, or label pagination |
+| `project_query` | Project query (including token authorization failures), or missing/wrong-type Project node |
+| `project_membership` | Missing, ambiguous, malformed, or incompletely paginated item membership |
+| `status_validation` | Missing/malformed Status field, options, or current value; desired option unavailable |
+| `workflow_label_lookup` | Malformed `needs:review` lookup, or label absent when it must be added |
+
+These codes identify the failed stage, not the underlying API error. In particular,
+`project_query` does not prove an authorization problem. Project-node type is
+checked using `__typename`; API error text and response values are never copied
+into diagnostics. Every categorized failure exits 1 with `outcome: error` and
+`writes: []`. An unset current Status remains valid, and a missing `needs:review`
+label only blocks an action that needs to add it.
+
 No agent starts, comments, merge automation, or automatic final approval are added.
 
 ## Verification and rollout
