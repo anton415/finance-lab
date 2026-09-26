@@ -1,6 +1,6 @@
 """Live adapter tests with synthetic state and intercepted GitHub calls."""
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from copy import deepcopy
 import io
 import json
@@ -147,6 +147,9 @@ class ApplyTests(unittest.TestCase):
                 self.assertEqual(result["writes"], [])
                 self.assertTrue(all(call[0] == "read" for call in api.calls))
                 self.assertNotIn(SENTINEL, json.dumps(result))
+                if missing != "read":
+                    self.assertEqual(result["diagnostic"],
+                                     "status_validation" if missing == "options" else "workflow_label_lookup")
         api = Mock()
         evidence = decide(event_for(CASES[0]), Mock(return_value=[23]))
         for project, owner in (("", "project"), (PROJECT, ""), (PROJECT, "both")):
@@ -201,13 +204,63 @@ def project_item(project=PROJECT):
 
 def project_data(items=None):
     state = snapshot()
-    return {"project": {"field": {
+    return {"project": {"__typename": "ProjectV2", "field": {
         "id": state["field_id"],
         "options": [{"name": name, "id": value} for name, value in state["options"].items()],
     }}, "issue": {"projectItems": items or connection([project_item()])}}
 
 
 class ApiTests(unittest.TestCase):
+    def assert_read_failure(self, pages, diagnostic):
+        with patch.object(live, "graphql", side_effect=pages) as api:
+            result = apply(CASES[1], live.GitHub())
+        self.assertEqual(result["outcome"], "error")
+        self.assertEqual(result["writes"], [])
+        self.assertEqual(result["diagnostic"], diagnostic)
+        self.assertIn("no writes", result["reason"])
+        self.assertNotIn(SENTINEL, json.dumps(result))
+        self.assertEqual(api.call_count, len(pages))
+        self.assertTrue(all(call.args[0].lstrip().startswith("query(") for call in api.call_args_list))
+
+    def test_repository_issue_and_label_read_diagnostics(self):
+        malformed = [LookupError(SENTINEL), {}, {"repository": None},
+                     {"repository": {"issue": None}}, issue_data(connection(None)),
+                     issue_data(connection([{"name": SENTINEL, "id": None}]))]
+        for data in malformed:
+            with self.subTest(data=data):
+                self.assert_read_failure([data], "repository_read")
+        page = issue_data(connection([], True, "next"))
+        for failure in (LookupError(SENTINEL), page):
+            self.assert_read_failure([page, failure], "repository_read")
+
+    def test_project_query_and_node_lookup_diagnostics(self):
+        for data in (LookupError(SENTINEL), {}, {"project": None}, {"project": {}},
+                     {"project": {"__typename": "Issue", "id": SENTINEL}}):
+            with self.subTest(data=data):
+                self.assert_read_failure([issue_data(), data], "project_query")
+
+    def test_workflow_label_lookup_diagnostics(self):
+        for label in ({"id": None}, {"id": ""}, {"name": SENTINEL}):
+            data = issue_data()
+            data["repository"]["label"] = label
+            self.assert_read_failure([data], "workflow_label_lookup")
+        data = issue_data()
+        data["repository"]["label"] = None
+        self.assert_read_failure([data, project_data()], "workflow_label_lookup")
+
+    def test_absent_review_label_and_unset_status_remain_valid_for_draft(self):
+        issue, project = issue_data(), project_data()
+        issue["repository"]["label"] = None
+        project["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = None
+        api = live.GitHub()
+        with patch.object(live, "graphql", side_effect=[issue, project]), \
+                patch.object(api, "remove_labels"), patch.object(api, "set_status"), \
+                patch.object(api, "add_review") as add_review:
+            result = apply(CASES[0], api)
+        self.assertEqual(result["outcome"], "updated")
+        self.assertEqual(result["writes"], ["remove_workflow_labels", "set_status"])
+        add_review.assert_not_called()
+
     def test_read_paginates_labels_and_memberships_before_selecting_item(self):
         pages = [
             issue_data(connection([{"id": "L_meta", "name": "learning"}], True, "labels-next")),
@@ -230,31 +283,37 @@ class ApiTests(unittest.TestCase):
             project_data(connection([project_item("PVT_other")])),
             project_data(connection(None)),
             project_data(connection([project_item()], True, None)),
-            {"project": None},
         ]
+        data = project_data()
+        data["issue"]["projectItems"]["nodes"][0]["id"] = None
+        malformed.append(data)
+        for data in malformed:
+            with self.subTest(data=data):
+                self.assert_read_failure([issue_data(), data], "project_membership")
+
+    def test_status_field_options_and_current_value_diagnostics(self):
+        malformed = []
         for field in (None, {}, {"id": "field", "options": None}):
             data = project_data()
             data["project"]["field"] = field
             malformed.append(data)
-        data = project_data()
-        data["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = {}
-        malformed.append(data)
+        for options in ([], [{"name": SENTINEL}],
+                        [{"name": "Review", "id": "1"}, {"name": "Review", "id": "2"}]):
+            data = project_data()
+            data["project"]["field"]["options"] = options
+            malformed.append(data)
+        for value in ({}, {"optionId": ""}, {"optionId": None}, SENTINEL):
+            data = project_data()
+            data["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = value
+            malformed.append(data)
         for data in malformed:
             with self.subTest(data=data):
-                with patch.object(live, "graphql", side_effect=[issue_data(), data]) as api:
-                    result = apply(CASES[1], live.GitHub())
-                self.assertEqual(result["outcome"], "error")
-                self.assertEqual(result["writes"], [])
-                self.assertEqual(api.call_count, 2)
+                self.assert_read_failure([issue_data(), data], "status_validation")
 
     def test_partial_read_failure_or_repeated_cursor_does_not_write(self):
         page = project_data(connection([project_item()], True, "next"))
-        for failure in (LookupError(SENTINEL), page):
-            with patch.object(live, "graphql", side_effect=[issue_data(), page, failure]) as api:
-                result = apply(CASES[1], live.GitHub())
-            self.assertEqual(result["outcome"], "error")
-            self.assertEqual(result["writes"], [])
-            self.assertEqual(api.call_count, 3)
+        for failure, diagnostic in ((LookupError(SENTINEL), "project_query"), (page, "project_membership")):
+            self.assert_read_failure([issue_data(), page, failure], diagnostic)
 
     def test_exact_mutation_targets_and_separate_credentials(self):
         replies = [issue_data(), project_data(),
@@ -309,10 +368,12 @@ class ApiTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
-    def invoke(self, case, env_extra=None, lookup=None):
+    def invoke(self, case, env_extra=None, lookup=None, api=None):
         with tempfile.TemporaryDirectory() as directory:
             event_path = Path(directory) / "event.json"
-            event_path.write_text(json.dumps(event_for(case)))
+            event = event_for(case)
+            event["pull_request"].update(title=SENTINEL, body=SENTINEL, head={"ref": SENTINEL})
+            event_path.write_text(json.dumps(event))
             env = {
                 "GITHUB_EVENT_PATH": str(event_path), "GITHUB_EVENT_NAME": "pull_request_target",
                 "GITHUB_REPOSITORY": REPOSITORY, "GITHUB_RUN_ID": RUN["id"],
@@ -320,14 +381,40 @@ class CliTests(unittest.TestCase):
                 "LIFECYCLE_DONE_OWNER": "controller", "PROJECT_TOKEN": SENTINEL,
                 **(env_extra or {}),
             }
-            output, api = io.StringIO(), FakeGitHub()
-            evidence = decide(event_for(case), lookup or Mock(return_value=case["issues"]))
-            with patch.dict(live.os.environ, env, clear=True), redirect_stdout(output):
+            output, errors = io.StringIO(), io.StringIO()
+            api = api if api is not None else FakeGitHub()
+            evidence = decide(event, lookup or Mock(return_value=case["issues"]))
+            with patch.dict(live.os.environ, env, clear=True), redirect_stdout(output), redirect_stderr(errors):
                 with patch.object(live, "dry_run", return_value=evidence), patch.object(live, "GitHub", return_value=api):
                     code = live.main()
         self.assertEqual(len(output.getvalue().splitlines()), 1)
         self.assertNotIn(SENTINEL, output.getvalue())
+        self.assertEqual(errors.getvalue(), "")
         return code, json.loads(output.getvalue()), api
+
+    def test_safe_diagnostics_reach_cli_with_failure_exit_and_no_writes(self):
+        issue, project = issue_data(), project_data()
+        issue["repository"]["label"] = None
+        project["project"]["field"] = None
+        api_failure = {"data": project_data(), "errors": [{"message": SENTINEL}]}
+        cases = [
+            ("repository_read", [gh_result(api_failure)]),
+            ("project_query", [gh_result({"data": issue_data()}), gh_result(api_failure)]),
+            ("project_membership", [gh_result({"data": issue_data()}),
+                                    gh_result({"data": project_data(connection([]))})]),
+            ("status_validation", [gh_result({"data": issue_data()}), gh_result({"data": project})]),
+            ("workflow_label_lookup", [gh_result({"data": issue}), gh_result({"data": project_data()})]),
+        ]
+        for diagnostic, replies in cases:
+            with self.subTest(diagnostic=diagnostic):
+                with patch.object(live.subprocess, "run", side_effect=replies) as run:
+                    code, result, _ = self.invoke(CASES[1], api=live.GitHub())
+                self.assertEqual((code, result["outcome"]), (1, "error"))
+                self.assertEqual(result["diagnostic"], diagnostic)
+                self.assertEqual(result["writes"], [])
+                self.assertEqual(run.call_count, len(replies))
+                self.assertTrue(all(json.loads(call.kwargs["input"])["query"].lstrip().startswith("query(")
+                                    for call in run.call_args_list))
 
     def test_exit_status_trace_and_no_write_guards(self):
         code, result, _ = self.invoke(CASES[1])

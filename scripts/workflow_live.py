@@ -1,5 +1,6 @@
 """Apply the accepted dry-run decisions to existing issue/Project state."""
 
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,7 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
 PROJECT_QUERY = """
 query($issue: ID!, $project: ID!, $cursor: String) {
   project: node(id: $project) {
+    __typename
     ... on ProjectV2 {
       field(name: "Status") {
         ... on ProjectV2SingleSelectField { id options { id name } }
@@ -62,6 +64,32 @@ mutation($input: AddLabelsToLabelableInput!) {
   addLabelsToLabelable(input: $input) { labelable { id } }
 }
 """
+
+
+READ_FAILURES = {
+    "repository_read": "Cannot read repository issue/labels; no writes.",
+    "project_query": (
+        "Cannot query Project state or resolve the Project node; check access/configuration; no writes."
+    ),
+    "project_membership": "Missing, ambiguous, or incomplete Project item membership; no writes.",
+    "status_validation": "Missing or malformed Status field/options/current value; no writes.",
+    "workflow_label_lookup": "Cannot resolve the required needs:review workflow label; no writes.",
+}
+
+
+class ReadFailure(LookupError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(READ_FAILURES[code])
+
+
+@contextmanager
+def read_stage(code):
+    """Attach only a fixed stage code; never log API or payload text."""
+    try:
+        yield
+    except (LookupError, ValueError, TypeError, AttributeError):
+        raise ReadFailure(code) from None
 
 
 def graphql(query, variables, *, project=False):
@@ -112,46 +140,57 @@ class GitHub:
         owner, name = repository.split("/")
         labels, cursor, seen = {}, None, set()
         while True:
-            repo = graphql(ISSUE_QUERY, {
-                "owner": owner, "name": name, "number": number, "cursor": cursor,
-            })["repository"]
-            issue_id = text_id(repo["issue"]["id"])
-            review_id = text_id(repo["label"]["id"]) if repo["label"] else None
-            connection = repo["issue"]["labels"]
-            cursor = next_page(connection, seen)
-            for label in connection["nodes"]:
-                labels[text_id(label["name"])] = text_id(label["id"])
+            with read_stage("repository_read"):
+                repo = graphql(ISSUE_QUERY, {
+                    "owner": owner, "name": name, "number": number, "cursor": cursor,
+                })["repository"]
+                issue_id = text_id(repo["issue"]["id"])
+                connection = repo["issue"]["labels"]
+                cursor = next_page(connection, seen)
+                for label in connection["nodes"]:
+                    labels[text_id(label["name"])] = text_id(label["id"])
+            with read_stage("workflow_label_lookup"):
+                review_id = text_id(repo["label"]["id"]) if repo["label"] else None
             if cursor is None:
                 break
 
         items, cursor, seen = [], None, set()
         while True:
-            data = graphql(PROJECT_QUERY, {
-                "issue": issue_id, "project": project, "cursor": cursor,
-            }, project=True)
-            field = data["project"]["field"]
-            field_id = text_id(field["id"])
-            options = {}
-            for option in field["options"]:
-                name = text_id(option["name"])
-                if name in options:
+            with read_stage("project_query"):
+                data = graphql(PROJECT_QUERY, {
+                    "issue": issue_id, "project": project, "cursor": cursor,
+                }, project=True)
+                if data["project"]["__typename"] != "ProjectV2":
                     raise ValueError
-                options[name] = text_id(option["id"])
-            connection = data["issue"]["projectItems"]
-            cursor = next_page(connection, seen)
-            for item in connection["nodes"]:
-                if item["project"]["id"] == project:
-                    items.append(item)
+            with read_stage("status_validation"):
+                field = data["project"]["field"]
+                field_id = text_id(field["id"])
+                options = {}
+                for option in field["options"]:
+                    name = text_id(option["name"])
+                    if name in options:
+                        raise ValueError
+                    options[name] = text_id(option["id"])
+            with read_stage("project_membership"):
+                connection = data["issue"]["projectItems"]
+                cursor = next_page(connection, seen)
+                for item in connection["nodes"]:
+                    if item["project"]["id"] == project:
+                        items.append(item)
             if cursor is None:
                 break
-        if len(items) != 1:
-            raise ValueError
-        item = items[0]
-        value = item["fieldValueByName"]
+        with read_stage("project_membership"):
+            if len(items) != 1:
+                raise ValueError
+            item = items[0]
+            item_id = text_id(item["id"])
+        with read_stage("status_validation"):
+            value = item["fieldValueByName"]
+            status = text_id(value["optionId"]) if value is not None else None
         return {
             "issue_id": issue_id, "labels": labels, "review_id": review_id,
-            "item_id": text_id(item["id"]), "field_id": field_id, "options": options,
-            "status": text_id(value["optionId"]) if value is not None else None,
+            "item_id": item_id, "field_id": field_id, "options": options,
+            "status": status,
         }
 
     def remove_labels(self, state, names):
@@ -202,10 +241,13 @@ def apply_decision(evidence, repository, project, done_owner, api):
         status = evidence["intended_status"]
         manage_status = status != "Done" or done_owner == "controller"
         if manage_status and status not in state["options"]:
-            raise ValueError
+            raise ReadFailure("status_validation")
         if add_review and not state["review_id"]:
-            raise ValueError
+            raise ReadFailure("workflow_label_lookup")
         update_status = manage_status and state["status"] != state["options"][status]
+    except ReadFailure as failure:
+        result.update(outcome="error", diagnostic=failure.code, reason=READ_FAILURES[failure.code])
+        return result
     except (LookupError, ValueError, TypeError, AttributeError):
         result.update(outcome="error", reason="Cannot read complete issue/Project configuration; no writes.")
         return result
