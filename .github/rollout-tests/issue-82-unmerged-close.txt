@@ -1,0 +1,2 @@
+Disposable branch-only artifact for issue #82 unmerged-close lifecycle verification.
+This file must never be merged to main.
