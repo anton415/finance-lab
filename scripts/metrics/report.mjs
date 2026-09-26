@@ -1,15 +1,27 @@
 export function buildReport(observations) {
   const latestByPr = new Map()
+  const attemptsByPr = new Map()
   for (const observation of observations) {
     const current = latestByPr.get(observation.pr.number)
     if (!current || observation.collected_at > current.collected_at) {
       latestByPr.set(observation.pr.number, observation)
     }
+
+    if (!attemptsByPr.has(observation.pr.number)) attemptsByPr.set(observation.pr.number, new Map())
+    const attempts = attemptsByPr.get(observation.pr.number)
+    // A head update or retry must not discard CI evidence already retained.
+    for (const run of observation.ci_runs ?? []) {
+      const key = `${run.id}:${run.run_attempt}`
+      const previous = attempts.get(key)
+      if (!previous || observation.collected_at > previous.collected_at) {
+        attempts.set(key, { collected_at: observation.collected_at, run })
+      }
+    }
   }
 
   const prs = [...latestByPr.values()]
     .map((observation) => {
-      const runs = observation.ci_runs ?? []
+      const runs = [...attemptsByPr.get(observation.pr.number).values()].map((attempt) => attempt.run)
       const completed = runs.filter((run) => run.status === 'completed')
       const failed = completed.filter((run) => run.conclusion !== 'success').length
       const changesRequested = (observation.reviews ?? []).filter((review) => review.state === 'CHANGES_REQUESTED').length
