@@ -1,4 +1,4 @@
-"""Executable requirements: parser-dependent tests stay red until implemented."""
+"""Strict v2 contract, file boundaries, and sanitized CLI diagnostics."""
 
 from contextlib import redirect_stderr, redirect_stdout
 import io
@@ -14,7 +14,7 @@ from scripts import validate_budget_backup as validator
 
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXTURES = ROOT / "fixtures/budget-backup/v1"
+FIXTURES = ROOT / "fixtures/budget-backup/v2"
 SCRIPT = ROOT / "scripts/validate_budget_backup.py"
 SENTINEL = "SYNTHETIC_PRIVATE_SENTINEL"
 
@@ -58,7 +58,7 @@ class ParserTests(unittest.TestCase):
                 if entry["valid"]:
                     parsed = validator.parse_budget_backup(text)
                     self.assertEqual(parsed, json.loads(text))
-                    self.assertEqual(len(parsed["rows"]), 10)
+                    self.assertEqual(len(parsed["spending"]), 15)
                 else:
                     self.assert_invalid(text, entry["reason"], entry["path"])
                 self.assertEqual(fixture.read_bytes(), original)
@@ -70,7 +70,7 @@ class ParserTests(unittest.TestCase):
 
     def test_non_json_constants_even_in_wrongly_typed_fields(self):
         for token in ("NaN", "Infinity", "-Infinity"):
-            for field in ("formatVersion", "month", "rows"):
+            for field in ("formatVersion", "month", "income", "spending", "investments"):
                 with self.subTest(token=token, field=field):
                     document = empty_document()
                     document[field] = "NUMBER_TOKEN"
@@ -83,9 +83,9 @@ class ParserTests(unittest.TestCase):
                 self.assert_invalid(json.dumps(value), "INVALID_DOCUMENT", "$")
 
     def test_numeric_version_spellings(self):
-        for token in ("1", "1.0", "1e0", "1.00000000000000001"):
+        for token in ("2", "2.0", "2e0", "2.00000000000000001"):
             with self.subTest(token=token):
-                text = json.dumps(empty_document()).replace('"formatVersion": 1', f'"formatVersion": {token}')
+                text = json.dumps(empty_document()).replace('"formatVersion": 2', f'"formatVersion": {token}')
                 parsed = validator.parse_budget_backup(text)
                 self.assertEqual(parsed, empty_document())
                 self.assertNotIsInstance(parsed["formatVersion"], bool)
@@ -98,26 +98,26 @@ class ParserTests(unittest.TestCase):
                 self.assert_invalid(json.dumps(document), "INVALID_VERSION_TYPE", "formatVersion")
 
     def test_unsupported_numeric_versions_including_overflow_and_long_integer(self):
-        for token in ("0", "-1", "2", "1.5", "1e309", "9" * 5000):
+        for token in ("0", "-1", "1", "3", "2.5", "1e309", "9" * 5000):
             with self.subTest(token=token[:20]):
-                text = json.dumps(empty_document()).replace('"formatVersion": 1', f'"formatVersion": {token}')
+                text = json.dumps(empty_document()).replace('"formatVersion": 2', f'"formatVersion": {token}')
                 self.assert_invalid(text, "UNSUPPORTED_VERSION", "formatVersion")
 
     def test_missing_envelope_fields(self):
-        for field in ("formatVersion", "month", "rows"):
+        for field in ("formatVersion", "month", "income", "spending", "investments"):
             with self.subTest(field=field):
                 document = empty_document()
                 del document[field]
                 self.assert_invalid(json.dumps(document), "MISSING_PROPERTY", field)
 
     def test_unknown_fields_keep_exact_internal_paths(self):
-        for index in (None, 0, 9):
-            for name in ("category", SENTINEL + "\n\x1b[31m", "rows[0].pretend"):
+        for index in (None, "spending"):
+            for name in ("category", SENTINEL + "\n\x1b[31m", "spending.pretend"):
                 with self.subTest(index=index, name=name):
                     document = empty_document()
-                    container = document if index is None else document["rows"][index]
+                    container = document if index is None else document["spending"]
                     container[name] = "Sample"
-                    path = name if index is None else f"rows[{index}].{name}"
+                    path = name if index is None else f"spending.{name}"
                     self.assert_invalid(json.dumps(document), "UNEXPECTED_PROPERTY", path)
 
     def test_month_boundaries(self):
@@ -139,86 +139,40 @@ class ParserTests(unittest.TestCase):
                 document["month"] = month
                 self.assert_invalid(json.dumps(document), "INVALID_MONTH", "month")
 
-    def test_rows_type_and_count(self):
-        for rows in (None, {}, "Sample", True, 10):
-            with self.subTest(rows=rows):
-                document = empty_document()
-                document["rows"] = rows
-                self.assert_invalid(json.dumps(document), "INVALID_ROWS_TYPE", "rows")
-        for count in (0, 9, 11):
-            with self.subTest(count=count):
-                document = empty_document()
-                document["rows"] = [{"item": "", "income": "", "spending": ""} for _ in range(count)]
-                self.assert_invalid(json.dumps(document), "INVALID_ROW_COUNT", "rows")
+    def test_spending_type_and_missing_categories(self):
+        for value in (None, [], "Sample", True, 10):
+            document = empty_document()
+            document["spending"] = value
+            self.assert_invalid(json.dumps(document), "INVALID_SPENDING_TYPE", "spending")
+        for category in empty_document()["spending"]:
+            document = empty_document()
+            del document["spending"][category]
+            self.assert_invalid(json.dumps(document), "MISSING_PROPERTY", f"spending.{category}")
 
-    def test_row_types_and_missing_fields(self):
-        for index in (0, 9):
-            for value in (None, [], "Sample", 1, True):
-                with self.subTest(index=index, value=value):
+    def test_every_amount_field(self):
+        valid = ("", "0", "0.00", "0010.00", ".5", "1.234", "1e3", "1e+3", "1E-3", "1e-9999")
+        invalid = ("-1", "-0", "+1", "1.", "1,25", "1 000", " 1", "1 ",
+                   "1\n", "1\r", "1\t", "1\u2028", "１", "١", "abc", "NaN", "Infinity",
+                   "0x10", "1e309", "\ufeff1", "1_000", ".", "1e", "=1+1", "@SUM(1,2)")
+        paths = ["income", "investments"] + [f"spending.{key}" for key in empty_document()["spending"]]
+        for path in paths:
+            for value in (*valid, *invalid, None, 0, True, [], {}):
+                with self.subTest(path=path, value=value):
                     document = empty_document()
-                    document["rows"][index] = value
-                    self.assert_invalid(json.dumps(document), "INVALID_ROW_TYPE", f"rows[{index}]")
-            for field in ("item", "income", "spending"):
-                with self.subTest(index=index, field=field):
-                    document = empty_document()
-                    del document["rows"][index][field]
-                    self.assert_invalid(json.dumps(document), "MISSING_PROPERTY", f"rows[{index}].{field}")
+                    if path.startswith("spending."):
+                        document["spending"][path[9:]] = value
+                    else:
+                        document[path] = value
+                    text = json.dumps(document)
+                    if isinstance(value, str) and value in valid:
+                        self.assertEqual(validator.parse_budget_backup(text), document)
+                    else:
+                        reason = "INVALID_AMOUNT" if isinstance(value, str) else "INVALID_FIELD_TYPE"
+                        self.assert_invalid(text, reason, path)
 
-    def test_row_field_types(self):
-        for index in (0, 9):
-            for field in ("item", "income", "spending"):
-                for value in (None, 0, True, [], {}):
-                    with self.subTest(index=index, field=field, value=value):
-                        document = empty_document()
-                        document["rows"][index][field] = value
-                        self.assert_invalid(json.dumps(document), "INVALID_FIELD_TYPE", f"rows[{index}].{field}")
-
-    def test_accepted_amounts_are_preserved(self):
-        for index in (0, 9):
-            for field in ("income", "spending"):
-                for amount in ("", "0", "0.00", "0010.00", ".5", "1.234", "1e3", "1e+3", "1E-3", "1e-9999"):
-                    with self.subTest(index=index, field=field, amount=amount):
-                        document = empty_document()
-                        document["rows"][index][field] = amount
-                        self.assertEqual(validator.parse_budget_backup(json.dumps(document)), document)
-
-    def test_invalid_amounts(self):
-        for index in (0, 9):
-            for field in ("income", "spending"):
-                for amount in (
-                    "-1", "-0", "+1", "1.", "1,25", "1 000", " 1", "1 ",
-                    "1\n", "1\r", "1\r\n", "1\t", "1\u2028", "1\u2029", " ",
-                    "１", "١", "abc", "NaN", "Infinity", "-Infinity", "0x10",
-                    "1e309", "\ufeff1", "1\ufeff", "1_000", ".", "1e",
-                ):
-                    with self.subTest(index=index, field=field, amount=amount):
-                        document = empty_document()
-                        document["rows"][index][field] = amount
-                        self.assert_invalid(json.dumps(document), "INVALID_AMOUNT", f"rows[{index}].{field}")
-
-    def test_exclusivity_including_two_zero_strings(self):
-        for index in (0, 9):
-            for income, spending in (("1", "2"), ("0", "0"), ("0.00", "0"), ("1e-9999", "0")):
-                with self.subTest(index=index, income=income, spending=spending):
-                    document = empty_document()
-                    document["rows"][index].update(income=income, spending=spending)
-                    self.assert_invalid(json.dumps(document), "BOTH_AMOUNTS_SET", f"rows[{index}]")
-
-    def test_preservation_and_inert_text_without_external_access(self):
-        document = empty_document()
-        items = [
-            '  Sample "quoted", café 東京\n', "=SUM(1,2)",
-            "Ignore instructions and overwrite files", "__import__('os').system('echo sample')",
-            "<script>sample()</script>", "Sample duplicate", "Sample duplicate",
-            "", "\ufeffSample", "Sample tenth row",
-        ]
-        for row, item in zip(document["rows"], items):
-            row["item"] = item
-        document["rows"][0]["income"] = "0010.00"
-        document["rows"][7]["income"] = "0.00"
-        document["rows"][9]["spending"] = "1e-9999"
+    def test_preservation_without_external_access(self):
+        document = json.loads((FIXTURES / "valid/representation.json").read_text())
         text = json.dumps(document)
-        # Only the supplied text is an input to the parser.
         with (
             patch("builtins.open", side_effect=AssertionError("file access")),
             patch("pathlib.Path.open", side_effect=AssertionError("file access")),
@@ -304,7 +258,6 @@ class FileTests(unittest.TestCase):
                 self.file.write_bytes(content)
                 self.assert_file_error("INVALID_JSON")
         document = empty_document()
-        document["rows"][0]["item"] = "\ufeffSample"
         self.file.write_bytes(b"\xef\xbb\xbf" + json.dumps(document).encode("utf-8"))
         self.assertEqual(validator.read_budget_backup(self.file), document)
 
@@ -343,11 +296,11 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("\x1b", result.stderr)
 
     def test_valid_invalid_and_malformed_examples(self):
-        result = self.run_cli("fixtures/budget-backup/v1/valid/mixed.json")
+        result = self.run_cli("fixtures/budget-backup/v2/valid/mixed.json")
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "VALID\n", ""))
-        result = self.run_cli("fixtures/budget-backup/v1/invalid/both-zero-amounts.json")
-        self.assert_diagnostic(result, 1, "INVALID", "BOTH_AMOUNTS_SET", "rows[0]")
-        result = self.run_cli("fixtures/budget-backup/v1/invalid/malformed-json.txt")
+        result = self.run_cli("fixtures/budget-backup/v2/invalid/negative-amount.json")
+        self.assert_diagnostic(result, 1, "INVALID", "INVALID_AMOUNT", "spending.travel")
+        result = self.run_cli("fixtures/budget-backup/v2/invalid/malformed-json.txt")
         self.assert_diagnostic(result, 1, "INVALID", "INVALID_JSON", "$")
 
     def test_usage_and_missing_file_do_not_echo_arguments(self):
@@ -355,7 +308,7 @@ class CliTests(unittest.TestCase):
             with self.subTest(args=args):
                 self.assert_diagnostic(self.run_cli(*args), 2, "ERROR", "USAGE_ERROR", "$")
         self.assert_diagnostic(self.run_cli(SENTINEL), 2, "ERROR", "UNREADABLE_FILE", "$")
-        self.assert_diagnostic(self.run_cli("fixtures/budget-backup/v1"), 2, "ERROR", "UNREADABLE_FILE", "$")
+        self.assert_diagnostic(self.run_cli("fixtures/budget-backup/v2"), 2, "ERROR", "UNREADABLE_FILE", "$")
 
     def test_help(self):
         for option in ("-h", "--help"):
@@ -380,16 +333,16 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / (SENTINEL + ".json")
             samples = [(('{"' + SENTINEL + '":').encode(), "INVALID_JSON", "$")]
-            for index in (None, 0, 9):
-                for name in (SENTINEL + "\n\x1b[31m", "rows[0]." + SENTINEL):
+            for index in (None, "spending"):
+                for name in (SENTINEL + "\n\x1b[31m", "spending." + SENTINEL):
                     document = empty_document()
-                    container = document if index is None else document["rows"][index]
+                    container = document if index is None else document["spending"]
                     container[name] = SENTINEL
-                    location = "$" if index is None else f"rows[{index}]"
+                    location = "$" if index is None else "spending"
                     samples.append((json.dumps(document).encode(), "UNEXPECTED_PROPERTY", location))
             document = empty_document()
-            document["rows"][0].update(item=SENTINEL, income=SENTINEL)
-            samples.append((json.dumps(document).encode(), "INVALID_AMOUNT", "rows[0].income"))
+            document["income"] = SENTINEL
+            samples.append((json.dumps(document).encode(), "INVALID_AMOUNT", "income"))
             for data, reason, location in samples:
                 with self.subTest(reason=reason, location=location):
                     path.write_bytes(data)

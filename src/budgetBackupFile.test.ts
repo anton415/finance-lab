@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
-import emptyText from '../fixtures/budget-backup/v1/valid/empty.json?raw'
-import representationText from '../fixtures/budget-backup/v1/valid/representation.json?raw'
+import emptyText from '../fixtures/budget-backup/v2/valid/empty.json?raw'
+import representationText from '../fixtures/budget-backup/v2/valid/representation.json?raw'
 import { BudgetBackupError } from './budgetBackup'
 import { BudgetBackupFileError, MAX_BACKUP_BYTES, readBudgetBackupFile } from './budgetBackupFile'
 
@@ -29,10 +29,9 @@ test('rejects whitespace-only text as JSON syntax rather than an empty file', as
   )
 })
 
-test('reads and preserves a valid multibyte document exactly at the inclusive byte cap', async () => {
+test('reads and preserves a valid BOM-prefixed document exactly at the inclusive byte cap', async () => {
   const document = JSON.parse(emptyText)
-  document.rows[0].item = 'Sample café 東京🙂'
-  const prefix = JSON.stringify(document)
+  const prefix = '\uFEFF' + JSON.stringify(document)
   const text = prefix + ' '.repeat(MAX_BACKUP_BYTES - encoder.encode(prefix).byteLength)
   const { file, read } = fileFromText(text)
 
@@ -44,8 +43,7 @@ test('reads and preserves a valid multibyte document exactly at the inclusive by
 
 test('rejects cap + 1 bytes before reading even when text length is below the cap', async () => {
   const document = JSON.parse(emptyText)
-  document.rows[0].item = 'Sample café 東京🙂'
-  const prefix = JSON.stringify(document)
+  const prefix = '\uFEFF' + JSON.stringify(document)
   const text = prefix + ' '.repeat(MAX_BACKUP_BYTES + 1 - encoder.encode(prefix).byteLength)
   const { file, read } = fileFromText(text)
 
@@ -60,9 +58,8 @@ test('decodes ordinary UTF-8 with no normalization or replacement', async () => 
   await expect(readBudgetBackupFile(file)).resolves.toEqual(JSON.parse(representationText))
 })
 
-test('tolerates exactly one initial BOM and preserves BOM characters inside item strings', async () => {
+test('tolerates exactly one initial BOM', async () => {
   const document = JSON.parse(emptyText)
-  document.rows[0].item = '\uFEFFSample\uFEFFtext\uFEFF'
   const text = JSON.stringify(document)
   const { file } = fileFromText(`\uFEFF${text}`)
 
@@ -79,7 +76,7 @@ test.each([
   [0xed, 0xa0, 0x80],
   [0xc0, 0xaf],
 ])('rejects malformed UTF-8 bytes %j without replacement', async (...invalidBytes) => {
-  const prefix = encoder.encode('{"item":"')
+  const prefix = encoder.encode('{"income":"')
   const suffix = encoder.encode('"}')
   const bytes = new Uint8Array([...prefix, ...invalidBytes, ...suffix])
   const { file } = fileFromBytes(bytes)

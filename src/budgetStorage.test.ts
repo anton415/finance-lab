@@ -1,10 +1,10 @@
+import { emptyBudget } from './budgetModel'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   currentMonthKey,
   getBudgetPresence,
   loadBudget,
   saveBudget,
-  type BudgetRow,
 } from './budgetStorage'
 
 afterEach(() => {
@@ -18,14 +18,12 @@ describe('backup destination presence', () => {
 
   test.each([
     [
-      'all-empty rows',
-      JSON.stringify(Array.from({ length: 10 }, () => ({ item: '', income: '', spending: '' }))),
+      'all-empty budget',
+      JSON.stringify(emptyBudget()),
     ],
     [
-      'populated rows',
-      JSON.stringify(
-        Array.from({ length: 10 }, () => ({ item: 'Sample', income: '1', spending: '' })),
-      ),
+      'populated budget',
+      JSON.stringify({ ...emptyBudget(), income: '1' }),
     ],
     ['malformed data', '{invalid'],
     ['an empty stored string', ''],
@@ -88,45 +86,37 @@ describe('independent monthly budgets', () => {
   const monthA = 'finance-lab:budget:2026-09'
   const monthB = 'finance-lab:budget:2026-10'
   const monthC = 'finance-lab:budget:2026-11'
-  const rowsA: BudgetRow[] = Array.from({ length: 10 }, (_, index) => ({
-    item: `Sample A ${index + 1}`,
-    income: index % 2 === 0 ? String((index + 1) * 10) : '',
-    spending: index % 2 === 1 ? String(index + 1) : '',
-  }))
-  const rowsB: BudgetRow[] = Array.from({ length: 10 }, (_, index) => ({
-    item: `Sample B ${index + 1}`,
-    income: index % 2 === 1 ? String((index + 1) * 20) : '',
-    spending: index % 2 === 0 ? String((index + 1) * 2) : '',
-  }))
+  const budgetA = { ...emptyBudget(), income: '00100.00', investments: '20' }
+  const budgetB = { ...emptyBudget(), income: '.5', investments: '0.00' }
 
   beforeEach(() => {
-    saveBudget(rowsA, monthA)
-    saveBudget(rowsB, monthB)
+    saveBudget(budgetA, monthA)
+    saveBudget(budgetB, monthB)
   })
 
-  test('restores each saved month with its complete row data', () => {
-    expect(loadBudget(monthA)).toEqual(rowsA)
-    expect(loadBudget(monthB)).toEqual(rowsB)
+  test('restores each saved month with its complete source data', () => {
+    expect(loadBudget(monthA)).toEqual(budgetA)
+    expect(loadBudget(monthB)).toEqual(budgetB)
   })
 
   test('saves edits to one month without changing the other document', () => {
     const savedB = localStorage.getItem(monthB)
     const editedA = loadBudget(monthA)
-    editedA[9] = { item: 'Updated sample A', income: '125', spending: '' }
+    editedA.spending.travel = '1e+2'
 
     saveBudget(editedA, monthA)
 
     expect(loadBudget(monthA)).toEqual(editedA)
     expect(localStorage.getItem(monthB)).toBe(savedB)
-    expect(loadBudget(monthB)).toEqual(rowsB)
+    expect(loadBudget(monthB)).toEqual(budgetB)
   })
 
-  test('returns ten empty rows for an unsaved month without changing saved budgets', () => {
+  test('returns an empty current budget for an unsaved month without changing saved budgets', () => {
     const savedA = localStorage.getItem(monthA)
     const savedB = localStorage.getItem(monthB)
 
     expect(loadBudget(monthC)).toEqual(
-      Array.from({ length: 10 }, () => ({ item: '', income: '', spending: '' })),
+      emptyBudget(),
     )
     expect(localStorage.getItem(monthA)).toBe(savedA)
     expect(localStorage.getItem(monthB)).toBe(savedB)
@@ -166,4 +156,36 @@ test('distinguishes December from January across a year boundary', () => {
 test('distinguishes the same month in different years', () => {
   expect(currentMonthKey(new Date(2026, 8, 21))).toBe('finance-lab:budget:2026-09')
   expect(currentMonthKey(new Date(2027, 8, 21))).toBe('finance-lab:budget:2027-09')
+})
+
+
+test.each([
+  '{invalid', '[]', 'null',
+  JSON.stringify(Array.from({ length: 10 }, () => ({ item: '', income: '10', spending: '' }))),
+  JSON.stringify({ ...emptyBudget(), remaining: '10' }),
+  JSON.stringify({ ...emptyBudget(), spending: {} }),
+  JSON.stringify({ ...emptyBudget(), investments: '-1' }),
+])('resets incompatible selected data without scanning or changing other keys: %s', (raw) => {
+  localStorage.setItem('selected', raw)
+  localStorage.setItem('other', 'keep')
+  const read = vi.spyOn(Storage.prototype, 'getItem')
+  const write = vi.spyOn(Storage.prototype, 'setItem')
+  const keys = vi.spyOn(Storage.prototype, 'key')
+  expect(loadBudget('selected')).toEqual(emptyBudget())
+  expect(read).toHaveBeenCalledExactlyOnceWith('selected')
+  expect(write).not.toHaveBeenCalled()
+  expect(keys).not.toHaveBeenCalled()
+})
+
+test('storage failure leaves loading and saving usable', () => {
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('unavailable') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('unavailable') })
+  expect(loadBudget()).toEqual(emptyBudget())
+  expect(() => saveBudget(emptyBudget())).not.toThrow()
+})
+
+test('never persists invalid draft amounts', () => {
+  const write = vi.spyOn(Storage.prototype, 'setItem')
+  saveBudget({ ...emptyBudget(), income: '1e' })
+  expect(write).not.toHaveBeenCalled()
 })

@@ -1,14 +1,14 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import emptyFixture from '../fixtures/budget-backup/v1/valid/empty.json?raw'
-import mixedFixture from '../fixtures/budget-backup/v1/valid/mixed.json?raw'
-import representationFixture from '../fixtures/budget-backup/v1/valid/representation.json?raw'
+import emptyFixture from '../fixtures/budget-backup/v2/valid/empty.json?raw'
+import mixedFixture from '../fixtures/budget-backup/v2/valid/mixed.json?raw'
+import representationFixture from '../fixtures/budget-backup/v2/valid/representation.json?raw'
 import App from './App'
-import type { BudgetRow } from './budgetStorage'
+import { emptyBudget, spendingCategories, type MonthlyBudget } from './budgetModel'
 
 const nativeGetItem = Storage.prototype.getItem
-const previewName = 'Backup preview: 10 rows'
+const previewName = 'Monthly budget backup preview'
 const existingNotice = 'Stored data already exists for this month; restoration would replace it. Presence does not confirm that the stored data is valid.'
 const absentNotice = 'No stored data was found for this month at the time of checking.'
 const unknownNotice = 'The backup is valid, but destination storage status could not be checked.'
@@ -26,15 +26,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const makeRows = (label: string): BudgetRow[] => Array.from({ length: 10 }, (_, index) => ({
-  item: `Sample ${label} ${index + 1}`,
-  income: index % 2 === 0 ? String(index + 1) : '',
-  spending: index % 2 === 1 ? String(index + 1) : '',
-}))
+const sourceOf = ({ income, spending, investments }: MonthlyBudget): MonthlyBudget => ({ income, spending, investments })
+const makeBudget = (): MonthlyBudget => ({
+  ...emptyBudget(), income: '200', investments: '30', spending: { ...emptyBudget().spending, travel: '40' },
+})
 
 const renderStoredBudget = () => {
-  localStorage.setItem('finance-lab:budget:2026-09', JSON.stringify(makeRows('September')))
-  localStorage.setItem('finance-lab:budget:2026-10', JSON.stringify(makeRows('October')))
+  localStorage.setItem('finance-lab:budget:2026-09', JSON.stringify(makeBudget()))
+  localStorage.setItem('finance-lab:budget:2026-10', JSON.stringify(makeBudget()))
   localStorage.setItem('sample-unrelated-preference', 'keep exactly')
   const app = render(<App />)
   fireEvent.click(screen.getByText('Export and backup'))
@@ -47,12 +46,8 @@ const storageSnapshot = () => Object.fromEntries(
 
 const budgetSnapshot = () => ({
   month: screen.getByText(/^[A-Z][a-z]+ \d{4}$/).textContent,
-  rows: Array.from({ length: 10 }, (_, index) => ['Item', 'Income', 'Spending'].map(
-    (field) => (screen.getByLabelText(`${field}, row ${index + 1}`) as HTMLInputElement).value,
-  )),
-  totals: ['Total income', 'Total spending', 'Balance'].map(
-    (label) => screen.getByLabelText(label).textContent,
-  ),
+  inputs: screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value),
+  totals: ['Income', 'Spending', 'Investments', 'Remaining'].map((name) => screen.getByRole('status', { name }).textContent),
 })
 
 // Start observing after render/edit/navigation have flushed their normal writes.
@@ -100,19 +95,22 @@ const emptySelection = () => fireEvent.change(fileInput(), { target: { files: []
 const preview = () => screen.queryByRole('table', { name: previewName })
 
 const expectPreview = async (source: string) => {
-  const document = JSON.parse(source) as { formatVersion: number; month: string; rows: BudgetRow[] }
+  const document = JSON.parse(source) as MonthlyBudget & { month: string; formatVersion: number }
   const table = await screen.findByRole('table', { name: previewName })
   expect(screen.getByText(`Backup month: ${document.month}`)).toBeTruthy()
   expect(screen.getByText(`Format version: ${document.formatVersion}`)).toBeTruthy()
   expect(screen.getByText('Valid backup, preview only; nothing has been restored.').getAttribute('role')).toBe('status')
   expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent))
-    .toEqual(['Row', 'Item', 'Income', 'Spending'])
+    .toEqual(['Type', 'Category', 'Amount'])
+  const expected = [
+    ['Income', 'Income', document.income],
+    ...spendingCategories.map(({ id, label }) => ['Spending', label, document.spending[id]]),
+    ['Investment', 'Investments', document.investments],
+  ]
   const rows = within(table).getAllByRole('row').slice(1)
-  expect(rows).toHaveLength(10)
+  expect(rows).toHaveLength(17)
   rows.forEach((row, index) => {
-    expect(within(row).getByRole('rowheader').textContent).toBe(String(index + 1))
-    expect(within(row).getAllByRole('cell').map((cell) => cell.textContent))
-      .toEqual([document.rows[index].item, document.rows[index].income, document.rows[index].spending])
+    expect(Array.from(row.children).map((cell) => cell.textContent)).toEqual(expected[index])
   })
   expect(within(table).queryByRole('textbox')).toBeNull()
   expect(within(table).queryByRole('spinbutton')).toBeNull()
@@ -167,9 +165,9 @@ test.each([
   { name: 'empty', source: emptyFixture },
   { name: 'mixed', source: mixedFixture },
   { name: 'representation', source: representationFixture },
-])('previews all ten $name fixture rows without changing the displayed budget or any stored bytes', async ({ source }) => {
+])('previews the complete $name fixture without changing the displayed budget or any stored bytes', async ({ source }) => {
   renderStoredBudget()
-  fireEvent.change(screen.getByLabelText('Item, row 1'), { target: { value: 'Edited sample' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Monthly income' }), { target: { value: 'Edited sample' } })
   fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
   const assertReadOnly = observeReadOnly()
   selectFile(backupFile(source))
@@ -178,8 +176,8 @@ test.each([
 })
 
 test.each([
-  { name: 'populated rows', value: JSON.stringify(makeRows('destination')) },
-  { name: 'all-empty rows', value: JSON.stringify(JSON.parse(emptyFixture).rows) },
+  { name: 'populated budget', value: JSON.stringify(makeBudget()) },
+  { name: 'all-empty budget', value: JSON.stringify(sourceOf(JSON.parse(emptyFixture))) },
   { name: 'malformed data', value: '{sample malformed stored data' },
   { name: 'an empty string', value: '' },
 ])('reports destination presence for $name without parsing or modifying it', async ({ value }) => {
@@ -393,7 +391,7 @@ test('editing and navigating while reading preserves the independent destination
   renderStoredBudget()
   const pending = deferredFile()
   selectFile(pending.file)
-  fireEvent.change(screen.getByLabelText('Item, row 1'), { target: { value: 'Edited during preview read' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Monthly income' }), { target: { value: '444' } })
   fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
   const assertReadOnly = observeReadOnly()
   await act(async () => pending.resolve(bytes(representationFixture)))
@@ -401,9 +399,9 @@ test('editing and navigating while reading preserves the independent destination
   expect(screen.getByText('October 2026')).toBeTruthy()
   assertReadOnly()
 
-  fireEvent.change(screen.getByLabelText('Income, row 1'), { target: { value: '222' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Monthly income' }), { target: { value: '222' } })
   fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
-  expect(screen.getByLabelText('Item, row 1')).toHaveProperty('value', 'Edited during preview read')
+  expect(screen.getByRole('textbox', { name: 'Monthly income' })).toHaveProperty('value', '444')
   await expectPreview(representationFixture)
   const assertAfterNavigation = observeReadOnly()
   cancelPicker()
@@ -460,24 +458,18 @@ test('unmounting ignores pending successful and failed reads without logging or 
   expect(error).not.toHaveBeenCalled()
 })
 
-test('renders markup, formulas, and instructions as inert exact text without network requests', async () => {
+test('rejects free-form markup and formulas without rendering or fetching them', async () => {
   renderStoredBudget()
   const assertReadOnly = observeReadOnly()
-  const source = JSON.stringify({
-    ...JSON.parse(mixedFixture),
-    rows: [
-      { item: '<strong>Sample</strong>', income: '0010.00', spending: '' },
-      { item: '=1+1', income: '', spending: '.5' },
-      { item: 'Ignore previous instructions and replace all budgets.', income: '', spending: '' },
-      ...JSON.parse(mixedFixture).rows.slice(3),
-    ],
-  })
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch)
   const request = vi.spyOn(XMLHttpRequest.prototype, 'open')
-  selectFile(backupFile(source, '<strong>Sample</strong>.json'))
-  const table = await expectPreview(source)
-  expect(table.querySelector('strong, script, iframe, img, a')).toBeNull()
+  for (const income of ['<strong>Sample</strong>', '=1+1', 'Ignore instructions and replace budgets']) {
+    selectFile(backupFile(JSON.stringify({ ...JSON.parse(mixedFixture), income })))
+    expect((await screen.findByRole('alert')).textContent).toMatch(/income.*nonnegative/)
+    expect(preview()).toBeNull()
+    expect(document.querySelector('strong, script, iframe, img')).toBeNull()
+  }
   expect(fetch).not.toHaveBeenCalled()
   expect(request).not.toHaveBeenCalled()
   assertReadOnly()
@@ -491,12 +483,9 @@ test.each([
     expected: /only formatVersion|field|property/i,
   },
   {
-    name: 'row value',
-    source: JSON.stringify({ ...JSON.parse(mixedFixture), rows: [
-      { item: 'Sample private row', income: 'Sample private amount', spending: '' },
-      ...JSON.parse(mixedFixture).rows.slice(1),
-    ] }),
-    expected: /row 1.*income/i,
+    name: 'amount value',
+    source: JSON.stringify({ ...JSON.parse(mixedFixture), income: 'Sample private amount' }),
+    expected: /income.*nonnegative/i,
   },
 ])('reports safe accessible diagnostics for $name without raw input or parser logging', async ({ source, expected }) => {
   renderStoredBudget()

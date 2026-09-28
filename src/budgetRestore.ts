@@ -11,12 +11,14 @@ export function localBudgetMonth(year: number, monthIndex: number) {
 
 // Complete every fallible preparation step before the final read/write boundary.
 export function prepareBudgetRestore(document: BudgetBackup) {
-  const source = validateBudgetData(document.month, document.rows)
+  const source = validateBudgetData(document.month, {
+    income: document.income, spending: document.spending, investments: document.investments,
+  })
   const month = localBudgetMonth(Number(source.month.slice(0, 4)), Number(source.month.slice(5)) - 1)
   return {
     month,
-    rows: source.rows,
+    data: source.budget,
     key: currentMonthKey(month),
-    serializedRows: JSON.stringify(source.rows),
+    serializedBudget: JSON.stringify(source.budget),
   }
 }

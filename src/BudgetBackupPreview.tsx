@@ -1,11 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { BudgetBackupError, type BudgetBackup } from './budgetBackup'
 import { BudgetBackupFileError, readBudgetBackupFile } from './budgetBackupFile'
-import { backupMonthKey, getBudgetPresence, type BudgetRow } from './budgetStorage'
+import { backupMonthKey, getBudgetPresence } from './budgetStorage'
 import { prepareBudgetRestore } from './budgetRestore'
+import { spendingCategories, type MonthlyBudget } from './budgetModel'
 
 type Candidate = { selection: number; document: BudgetBackup }
-type BudgetContext = { month: Date; rows: BudgetRow[] }
+type BudgetContext = { month: Date; data: MonthlyBudget }
 type Confirmation = { candidate: Candidate; context: BudgetContext; rawValue: string | null }
 
 type PreviewState =
@@ -43,7 +44,7 @@ function RestoreConfirmation({ confirmation, onCancel, onConfirm }: {
       onCancel()
     }}>
       <h2 id="restore-title">Restore backup for {month}</h2>
-      <p id="restore-scope">Restore all 10 rows for {month}, including empty rows. Success will display that month.</p>
+      <p id="restore-scope">Restore income, all fifteen spending categories, and investments for {month}, including empty amounts. Success will display that month.</p>
       {replacing ? (
         <p>All existing stored data for {month} will be replaced. There is no undo. Keep a JSON backup of current data first.</p>
       ) : (
@@ -112,8 +113,7 @@ export function BudgetBackupPreview({ budgetContext, onRestored, onRestoreActivi
 
       // The parsed document belongs to this selection and cannot change after
       // preview or approval, even if a later selection has the same filename.
-      document.rows.forEach(Object.freeze)
-      Object.freeze(document.rows)
+      Object.freeze(document.spending)
       Object.freeze(document)
       candidate.current = { selection, document }
       const presence = getBudgetPresence(document.month)
@@ -202,14 +202,14 @@ export function BudgetBackupPreview({ budgetContext, onRestored, onRestoreActivi
 
     // Synchronous read/check/write is a stale-data check, not a cross-tab lock.
     try {
-      localStorage.setItem(prepared.key, prepared.serializedRows)
+      localStorage.setItem(prepared.key, prepared.serializedBudget)
     } catch {
       setRestoreError('Could not restore this budget. No restoration was completed. Please try again.')
       return
     }
 
     clearPreview()
-    onRestored({ month: prepared.month, rows: prepared.rows }, document.month)
+    onRestored({ month: prepared.month, data: prepared.data }, document.month)
   }
 
   return (
@@ -254,24 +254,20 @@ export function BudgetBackupPreview({ budgetContext, onRestored, onRestoreActivi
           <p>This is the last checked storage snapshot, not approval to overwrite data.</p>
           <div className="backup-table-scroll">
             <table className="backup-table">
-              <caption>Backup preview: 10 rows</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Row</th>
-                  <th scope="col">Item</th>
-                  <th scope="col">Income</th>
-                  <th scope="col">Spending</th>
-                </tr>
-              </thead>
+              <caption>Monthly budget backup preview</caption>
+              <thead><tr>
+                <th scope="col">Type</th>
+                <th scope="col">Category</th>
+                <th scope="col">Amount</th>
+              </tr></thead>
               <tbody>
-                {state.document.rows.map((row, index) => (
-                  <tr key={index}>
-                    <th scope="row">{index + 1}</th>
-                    <td>{row.item}</td>
-                    <td>{row.income}</td>
-                    <td>{row.spending}</td>
+                <tr><td>Income</td><th scope="row">Income</th><td>{state.document.income}</td></tr>
+                {spendingCategories.map(({ id, label }) => (
+                  <tr key={id}>
+                    <td>Spending</td><th scope="row">{label}</th><td>{state.document.spending[id]}</td>
                   </tr>
                 ))}
+                <tr><td>Investment</td><th scope="row">Investments</th><td>{state.document.investments}</td></tr>
               </tbody>
             </table>
           </div>

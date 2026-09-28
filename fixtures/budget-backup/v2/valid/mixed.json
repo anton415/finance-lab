@@ -1,0 +1,23 @@
+{
+  "formatVersion": 2,
+  "month": "2026-09",
+  "income": "100.00",
+  "spending": {
+    "groceries": "25.50",
+    "restaurants": "7.25",
+    "utilities": "",
+    "transport": "",
+    "household": "",
+    "health": "",
+    "personal-care": "",
+    "clothing": "",
+    "subscriptions": "",
+    "education": "",
+    "tech": "",
+    "culture": "",
+    "entertainment": "",
+    "gifts": "",
+    "travel": "2.00"
+  },
+  "investments": "20.00"
+}

@@ -9,6 +9,13 @@ The project is at an early stage. Its initial technology direction is Vite, Reac
 
 All examples and financial data in this repository are synthetic.
 
+The monthly planner has one income amount, fifteen fixed spending categories,
+and a separate investment allocation. Remaining is Income − Spending − Investments.
+All categories stay visible. Valid edits save under the selected month's browser
+storage key; totals are derived. Incomplete or invalid amount edits show an error
+and are not saved or exported until corrected. Incompatible pre-MVP local data
+starts an empty budget with no migration. See the [v2 model and contract](docs/budget-backup-contract.md).
+
 See the [budget export guide](docs/budget-export.md) for selected-month CSV
 inspection and lossless JSON backups, including spreadsheet limitations.
 Use the [backup preview guide](docs/budget-backup-preview.md) to validate and

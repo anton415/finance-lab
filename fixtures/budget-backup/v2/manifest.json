@@ -1,0 +1,212 @@
+[
+  {
+    "file": "valid/empty.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "valid/mixed.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "valid/representation.json",
+    "valid": true,
+    "reason": null,
+    "path": null
+  },
+  {
+    "file": "invalid/version-string.json",
+    "valid": false,
+    "reason": "INVALID_VERSION_TYPE",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/version-bool.json",
+    "valid": false,
+    "reason": "INVALID_VERSION_TYPE",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/unsupported-version.json",
+    "valid": false,
+    "reason": "UNSUPPORTED_VERSION",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/future-version.json",
+    "valid": false,
+    "reason": "UNSUPPORTED_VERSION",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/month-format.json",
+    "valid": false,
+    "reason": "INVALID_MONTH",
+    "path": "month"
+  },
+  {
+    "file": "invalid/month-range.json",
+    "valid": false,
+    "reason": "INVALID_MONTH",
+    "path": "month"
+  },
+  {
+    "file": "invalid/spending-array.json",
+    "valid": false,
+    "reason": "INVALID_SPENDING_TYPE",
+    "path": "spending"
+  },
+  {
+    "file": "invalid/spending-null.json",
+    "valid": false,
+    "reason": "INVALID_SPENDING_TYPE",
+    "path": "spending"
+  },
+  {
+    "file": "invalid/income-not-string.json",
+    "valid": false,
+    "reason": "INVALID_FIELD_TYPE",
+    "path": "income"
+  },
+  {
+    "file": "invalid/investments-not-string.json",
+    "valid": false,
+    "reason": "INVALID_FIELD_TYPE",
+    "path": "investments"
+  },
+  {
+    "file": "invalid/investment-formula.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "investments"
+  },
+  {
+    "file": "invalid/missing-formatVersion.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "formatVersion"
+  },
+  {
+    "file": "invalid/missing-month.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "month"
+  },
+  {
+    "file": "invalid/missing-income.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "income"
+  },
+  {
+    "file": "invalid/missing-spending.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "spending"
+  },
+  {
+    "file": "invalid/missing-investments.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "investments"
+  },
+  {
+    "file": "invalid/whitespace-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/negative-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/overflow-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/nonfinite-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/comma-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/nonnumeric-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/newline-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/unicode-amount.json",
+    "valid": false,
+    "reason": "INVALID_AMOUNT",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/amount-not-string.json",
+    "valid": false,
+    "reason": "INVALID_FIELD_TYPE",
+    "path": "spending.groceries"
+  },
+  {
+    "file": "invalid/missing-category.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "spending.travel"
+  },
+  {
+    "file": "invalid/unknown-category.json",
+    "valid": false,
+    "reason": "UNEXPECTED_PROPERTY",
+    "path": "spending.unknown"
+  },
+  {
+    "file": "invalid/investment-in-spending.json",
+    "valid": false,
+    "reason": "UNEXPECTED_PROPERTY",
+    "path": "spending.investments"
+  },
+  {
+    "file": "invalid/extra-root-property.json",
+    "valid": false,
+    "reason": "UNEXPECTED_PROPERTY",
+    "path": "remaining"
+  },
+  {
+    "file": "invalid/root-array.json",
+    "valid": false,
+    "reason": "INVALID_DOCUMENT",
+    "path": "$"
+  },
+  {
+    "file": "invalid/malformed-json.txt",
+    "valid": false,
+    "reason": "INVALID_JSON",
+    "path": "$"
+  },
+  {
+    "file": "invalid/legacy-v1.json",
+    "valid": false,
+    "reason": "MISSING_PROPERTY",
+    "path": "income"
+  }
+]

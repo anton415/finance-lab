@@ -1,5 +1,5 @@
-import type { BudgetRow } from './budgetStorage'
-import { BudgetBackupError, budgetRowFields, validateBudgetData } from './budgetBackup'
+import { spendingCategories } from './budgetModel'
+import { BudgetBackupError, validateBudgetData } from './budgetBackup'
 
 export type BudgetExportFormat = 'csv' | 'json'
 
@@ -10,12 +10,9 @@ export class BudgetExportError extends Error {
   }
 }
 
-export function validateBudgetSource(
-  month: unknown,
-  rows: unknown,
-): { month: string; rows: BudgetRow[] } {
+export function validateBudgetSource(month: unknown, budget: unknown) {
   try {
-    return validateBudgetData(month, rows)
+    return validateBudgetData(month, budget)
   } catch (error) {
     if (error instanceof BudgetBackupError) throw new BudgetExportError(error.message)
     throw error
@@ -24,33 +21,29 @@ export function validateBudgetSource(
 
 const quoteCsvField = (value: string) => `"${value.replaceAll('"', '""')}"`
 
-export function serializeBudget(month: string, rows: unknown, format: BudgetExportFormat) {
-  const source = validateBudgetSource(month, rows)
-  const filename = `finance-lab-budget-${source.month}.${format}`
+export function serializeBudget(month: string, data: unknown, format: BudgetExportFormat) {
+  const { month: selectedMonth, budget } = validateBudgetSource(month, data)
+  const filename = `finance-lab-budget-${selectedMonth}.${format}`
+  const spending = Object.fromEntries(spendingCategories.map(({ id }) => [id, budget.spending[id]]))
 
   if (format === 'json') {
     const document = {
-      formatVersion: 1,
-      month: source.month,
-      rows: source.rows.map(({ item, income, spending }) => ({ item, income, spending })),
+      formatVersion: 2, month: selectedMonth,
+      income: budget.income, spending, investments: budget.investments,
     }
-    return {
-      content: `${JSON.stringify(document, null, 2)}\n`,
-      mimeType: 'application/json',
-      filename,
-    }
+    return { content: `${JSON.stringify(document, null, 2)}\n`, mimeType: 'application/json', filename }
   }
 
+  // Labels/types are fixed trusted text; amounts pass the complete numeric rule.
+  // There is no free-form text that could become a spreadsheet formula.
   const records = [
-    budgetRowFields.map(quoteCsvField).join(','),
-    ...source.rows.map(({ item, income, spending }) =>
-      [item === '' ? '' : `'${item}`, income, spending].map(quoteCsvField).join(','),
-    ),
-  ]
-
+    ['Type', 'Category', 'Amount'],
+    ['Income', 'Income', budget.income],
+    ...spendingCategories.map(({ id, label }) => ['Spending', label, budget.spending[id]]),
+    ['Investment', 'Investments', budget.investments],
+  ].map((record) => record.map(quoteCsvField).join(','))
   return {
     content: `\uFEFF${records.join('\r\n')}\r\n`,
-    mimeType: 'text/csv;charset=utf-8',
-    filename,
+    mimeType: 'text/csv;charset=utf-8', filename,
   }
 }
