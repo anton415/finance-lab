@@ -1,4 +1,4 @@
-"""Read-only, standard-library validator for the v1 budget-backup contract."""
+"""Read-only, standard-library validator for the v2 budget-backup contract."""
 
 import json
 import math
@@ -8,8 +8,12 @@ import sys
 
 
 MAX_BACKUP_BYTES = 1_048_576
-DOCUMENT_FIELDS = ("formatVersion", "month", "rows")
-ROW_FIELDS = ("item", "income", "spending")
+DOCUMENT_FIELDS = ("formatVersion", "month", "income", "spending", "investments")
+SPENDING_IDS = (
+    "groceries", "restaurants", "utilities", "transport", "household", "health",
+    "personal-care", "clothing", "subscriptions", "education", "tech", "culture",
+    "entertainment", "gifts", "travel",
+)
 AMOUNT_PATTERN = re.compile(r"(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 HELP = """usage: validate_budget_backup.py FILE
 
@@ -23,8 +27,8 @@ class BudgetBackupError(Exception):
     """A contract/file failure with a fixed message and an inspectable path.
 
     For UNEXPECTED_PROPERTY, path includes the untrusted property name; supply
-    container_path as '$' or 'rows[n]' so the CLI can omit that name entirely.
-    Other paths must contain only known contract fields and numeric indices.
+    container_path as '$' or 'spending' so the CLI can omit that name entirely.
+    Other paths must contain only known contract fields and category IDs.
     """
 
     def __init__(
@@ -66,6 +70,18 @@ def _validate_fields(
             )
 
 
+def _validate_amount(value: object, path: str) -> None:
+    if not isinstance(value, str):
+        raise BudgetBackupError("INVALID_FIELD_TYPE", path, "Each amount must be a string.")
+    if value != "" and (
+        AMOUNT_PATTERN.fullmatch(value) is None or not math.isfinite(float(value))
+    ):
+        raise BudgetBackupError(
+            "INVALID_AMOUNT", path,
+            "An amount must be empty or a finite nonnegative number string.",
+        )
+
+
 def parse_budget_backup(text: str) -> dict[str, object]:
     """Validate only the supplied text, returning its parsed values unchanged."""
     try:
@@ -97,9 +113,9 @@ def parse_budget_backup(text: str) -> dict[str, object]:
         raise BudgetBackupError(
             "INVALID_VERSION_TYPE", "formatVersion", "The version must be numeric."
         )
-    if version != 1:
+    if version != 2:
         raise BudgetBackupError(
-            "UNSUPPORTED_VERSION", "formatVersion", "Only version 1 is supported."
+            "UNSUPPORTED_VERSION", "formatVersion", "Only version 2 is supported."
         )
 
     month = document["month"]
@@ -110,37 +126,14 @@ def parse_budget_backup(text: str) -> dict[str, object]:
             "INVALID_MONTH", "month", "Use YYYY-MM with a year from 0001 to 9999."
         )
 
-    rows = document["rows"]
-    if not isinstance(rows, list):
-        raise BudgetBackupError("INVALID_ROWS_TYPE", "rows", "Rows must be an array.")
-    if len(rows) != 10:
-        raise BudgetBackupError(
-            "INVALID_ROW_COUNT", "rows", "The budget must contain exactly ten rows."
-        )
-
-    for index, row in enumerate(rows):
-        path = f"rows[{index}]"
-        if not isinstance(row, dict):
-            raise BudgetBackupError("INVALID_ROW_TYPE", path, "Each row must be an object.")
-        _validate_fields(row, ROW_FIELDS, path)
-        for field in ROW_FIELDS:
-            value = row[field]
-            if not isinstance(value, str):
-                raise BudgetBackupError(
-                    "INVALID_FIELD_TYPE", f"{path}.{field}", "Each row field must be a string."
-                )
-            if field != "item" and value != "" and (
-                AMOUNT_PATTERN.fullmatch(value) is None or not math.isfinite(float(value))
-            ):
-                raise BudgetBackupError(
-                    "INVALID_AMOUNT",
-                    f"{path}.{field}",
-                    "An amount must be empty or a finite nonnegative number string.",
-                )
-        if row["income"] != "" and row["spending"] != "":
-            raise BudgetBackupError(
-                "BOTH_AMOUNTS_SET", path, "A row cannot contain both income and spending."
-            )
+    _validate_amount(document["income"], "income")
+    spending = document["spending"]
+    if not isinstance(spending, dict):
+        raise BudgetBackupError("INVALID_SPENDING_TYPE", "spending", "Spending must be an object.")
+    _validate_fields(spending, SPENDING_IDS, "spending")
+    for category in SPENDING_IDS:
+        _validate_amount(spending[category], f"spending.{category}")
+    _validate_amount(document["investments"], "investments")
 
     return document
 

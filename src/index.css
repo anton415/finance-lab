@@ -124,7 +124,7 @@ dialog::backdrop {
 }
 
 .backup-table th:first-child {
-  width: 2.5rem;
+  width: 25%;
 }
 
 .backup-table th:nth-child(2) {
@@ -149,10 +149,6 @@ th {
   background: #f3f4f6;
 }
 
-th:not(:first-child) {
-  text-align: right;
-}
-
 input {
   box-sizing: border-box;
   width: 100%;
@@ -164,10 +160,6 @@ input {
 input:focus {
   outline: 2px solid #2563eb;
   outline-offset: -2px;
-}
-
-td:not(:first-child) input {
-  text-align: right;
 }
 
 .totals {
@@ -191,4 +183,38 @@ dd {
 dd {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+h2 {
+  margin: 1.25rem 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+.amount-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  border-bottom: 1px solid #d1d5db;
+  background: white;
+}
+
+.amount-field label {
+  padding: 0.65rem;
+}
+
+.amount-field input {
+  min-width: 0;
+  text-align: right;
+}
+
+.amount-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.5rem;
+  color: #b91c1c;
+}
+
+@media (max-width: 420px) {
+  .month-navigation { gap: 0.5rem; }
+  .month-navigation button { padding: 0.4rem; }
 }

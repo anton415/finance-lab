@@ -1,0 +1,23 @@
+{
+  "formatVersion": 2,
+  "month": "0000-01",
+  "income": "",
+  "spending": {
+    "groceries": "",
+    "restaurants": "",
+    "utilities": "",
+    "transport": "",
+    "household": "",
+    "health": "",
+    "personal-care": "",
+    "clothing": "",
+    "subscriptions": "",
+    "education": "",
+    "tech": "",
+    "culture": "",
+    "entertainment": "",
+    "gifts": "",
+    "travel": ""
+  },
+  "investments": ""
+}

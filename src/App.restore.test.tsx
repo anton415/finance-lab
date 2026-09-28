@@ -2,13 +2,14 @@ import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
-import emptyFixture from '../fixtures/budget-backup/v1/valid/empty.json?raw'
-import mixedFixture from '../fixtures/budget-backup/v1/valid/mixed.json?raw'
-import representationFixture from '../fixtures/budget-backup/v1/valid/representation.json?raw'
+import emptyFixture from '../fixtures/budget-backup/v2/valid/empty.json?raw'
+import mixedFixture from '../fixtures/budget-backup/v2/valid/mixed.json?raw'
+import representationFixture from '../fixtures/budget-backup/v2/valid/representation.json?raw'
 import App from './App'
 import { BudgetBackupPreview } from './BudgetBackupPreview'
 import { parseBudgetBackup } from './budgetBackup'
-import { loadBudget, type BudgetRow } from './budgetStorage'
+import { loadBudget } from './budgetStorage'
+import { emptyBudget, type MonthlyBudget } from './budgetModel'
 import { downloadFile } from './downloadFile'
 
 vi.mock('./downloadFile', () => ({ downloadFile: vi.fn() }))
@@ -49,15 +50,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const makeRows = (label: string): BudgetRow[] => Array.from({ length: 10 }, (_, index) => ({
-  item: `Sample ${label} ${index + 1}`,
-  income: index === 0 ? '200' : '',
-  spending: index === 9 ? '40' : '',
-}))
+const sourceOf = ({ income, spending, investments }: MonthlyBudget): MonthlyBudget => ({ income, spending, investments })
+const makeBudget = (): MonthlyBudget => ({
+  ...emptyBudget(), income: '200', investments: '30', spending: { ...emptyBudget().spending, travel: '40' },
+})
 
 const setup = () => {
-  localStorage.setItem(september, JSON.stringify(makeRows('September')))
-  localStorage.setItem(october, JSON.stringify(makeRows('October')))
+  localStorage.setItem(september, JSON.stringify(makeBudget()))
+  localStorage.setItem(october, JSON.stringify(makeBudget()))
   localStorage.setItem('finance-lab:budget:2028-02', '  [sample untouched data] ')
   localStorage.setItem('sample-preference', 'keep exactly')
   const app = render(<StrictMode><App /></StrictMode>)
@@ -70,10 +70,8 @@ const storageSnapshot = () => Object.fromEntries(Object.keys(localStorage).sort(
 ))
 const budgetSnapshot = () => ({
   month: document.querySelector('.month-navigation span')?.textContent,
-  inputs: Array.from({ length: 10 }, (_, index) => ['Item', 'Income', 'Spending'].map(
-    (label) => (screen.getByLabelText(`${label}, row ${index + 1}`) as HTMLInputElement).value,
-  )),
-  totals: ['Total income', 'Total spending', 'Balance'].map((label) => screen.getByLabelText(label).textContent),
+  inputs: screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value),
+  totals: ['Income', 'Spending', 'Investments', 'Remaining'].map((name) => screen.getByRole('status', { name }).textContent),
 })
 const observe = () => {
   const storage = storageSnapshot()
@@ -90,8 +88,8 @@ const observe = () => {
       expect(remove).not.toHaveBeenCalled()
       expect(clear).not.toHaveBeenCalled()
     },
-    restored(key: string, rows: BudgetRow[]) {
-      const serialized = JSON.stringify(rows)
+    restored(key: string, data: MonthlyBudget) {
+      const serialized = JSON.stringify(data)
       expect(write.mock.calls).toEqual([[key, serialized]])
       expect(remove).not.toHaveBeenCalled()
       expect(clear).not.toHaveBeenCalled()
@@ -111,7 +109,7 @@ const fileInput = () => screen.getByLabelText('Choose JSON backup')
 const selectFile = (file: File) => fireEvent.change(fileInput(), { target: { files: [file] } })
 const choose = async (source = mixedFixture) => {
   selectFile(backupFile(source))
-  await screen.findByRole('table', { name: 'Backup preview: 10 rows' })
+  await screen.findByRole('table', { name: 'Monthly budget backup preview' })
 }
 const startButton = () => screen.getByRole('button', { name: 'Restore backup…' })
 const begin = () => fireEvent.click(startButton())
@@ -130,19 +128,19 @@ const expectSuccess = (month: string) => {
   expect(screen.getByText(`Restored budget for ${month}`).getAttribute('role')).toBe('status')
   expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Monthly budget' }))
   expect(screen.queryByRole('dialog')).toBeNull()
-  expect(screen.queryByRole('table', { name: 'Backup preview: 10 rows' })).toBeNull()
+  expect(screen.queryByRole('table', { name: 'Monthly budget backup preview' })).toBeNull()
   expect(fileInput()).toHaveProperty('value', '')
   expect(startButton()).toHaveProperty('disabled', true)
 }
 
 test.each([
-  { name: 'empty', source: emptyFixture, offset: 1, totals: [0, 0, 0] },
-  { name: 'mixed', source: mixedFixture, offset: 0, totals: [100, 34.75, 65.25] },
-  { name: 'representation', source: representationFixture, offset: 4, totals: [2010.5, 101.235, 1909.265] },
+  { name: 'empty', source: emptyFixture, offset: 1, totals: [0, 0, 0, 0] },
+  { name: 'mixed', source: mixedFixture, offset: 0, totals: [100, 34.75, 20, 45.25] },
+  { name: 'representation', source: representationFixture, offset: 4, totals: [10, 2033.073, 0.001, -2023.074] },
 ])('round-trips the $name fixture through export, preview, restore, reload, and re-export', async ({ source, offset, totals }) => {
   const approved = parseBudgetBackup(source)
   const key = `finance-lab:budget:${approved.month}`
-  localStorage.setItem(key, JSON.stringify(approved.rows))
+  localStorage.setItem(key, JSON.stringify(sourceOf(approved)))
   localStorage.setItem('sample-preference', 'keep exactly')
   const app = render(<StrictMode><App /></StrictMode>)
   fireEvent.click(screen.getByText('Export and backup'))
@@ -151,19 +149,19 @@ test.each([
   const download = vi.mocked(downloadFile).mock.calls.at(-1)![0]
   navigate(1)
   // Replace a populated destination, including when the approved backup is empty.
-  nativeSet.call(localStorage, key, JSON.stringify(makeRows('old destination')))
+  nativeSet.call(localStorage, key, JSON.stringify(makeBudget()))
   const observed = observe()
   await choose(download.content)
   begin()
   expect(finalButton().textContent).toBe(`Replace month ${approved.month}`)
   observed.unchanged()
   confirm()
-  observed.restored(key, approved.rows)
+  observed.restored(key, sourceOf(approved))
   expectSuccess(approved.month)
   expect(exported()).toEqual(approved)
-  expect(loadBudget(key)).toEqual(approved.rows)
+  expect(loadBudget(key)).toEqual(sourceOf(approved))
   expect(budgetSnapshot().totals).toEqual(totals.map((value) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })))
-  expect(JSON.parse(nativeGet.call(localStorage, key)!)[9]).toEqual(approved.rows[9])
+  expect(JSON.parse(nativeGet.call(localStorage, key)!).spending.travel).toEqual(approved.spending.travel)
 
   app.unmount()
   render(<App />)
@@ -180,26 +178,26 @@ test.each([false, true])('restores September while a different month is displaye
   await choose()
   begin()
   confirm()
-  observed.restored(september, mixed.rows)
+  observed.restored(september, sourceOf(mixed))
   expectSuccess('2026-09')
   expect(screen.getByText('September 2026')).toBeTruthy()
   expect(exported()).toEqual(mixed)
   observed.write.mockClear()
-  fireEvent.change(screen.getByLabelText('Item, row 1'), { target: { value: 'Sample first edit' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Monthly income' }), { target: { value: '333' } })
   expect(observed.write).toHaveBeenCalledTimes(1)
-  expect(loadBudget(september)[0].item).toBe('Sample first edit')
+  expect(loadBudget(september).income).toBe('333')
   expect(screen.queryByText('Restored budget for 2026-09')).toBeNull()
   navigate(1)
-  expect(exported().rows).toEqual(makeRows('October'))
+  expect(sourceOf(exported())).toEqual(makeBudget())
   navigate(-1)
-  expect(exported().rows[0].item).toBe('Sample first edit')
+  expect(exported().income).toBe('333')
   expect(nativeGet.call(localStorage, october)).toBe(observed.storage[october])
 })
 
 test.each([
   { name: 'absent', raw: null, action: 'Restore' },
-  { name: 'populated', raw: JSON.stringify(makeRows('destination')), action: 'Replace' },
-  { name: 'empty rows', raw: JSON.stringify(JSON.parse(emptyFixture).rows), action: 'Replace' },
+  { name: 'populated', raw: JSON.stringify(makeBudget()), action: 'Replace' },
+  { name: 'empty amounts', raw: JSON.stringify(sourceOf(JSON.parse(emptyFixture))), action: 'Replace' },
   { name: 'empty array', raw: '[]', action: 'Replace' },
   { name: 'malformed', raw: '{sample malformed', action: 'Replace' },
   { name: 'empty string', raw: '', action: 'Replace' },
@@ -210,14 +208,14 @@ test.each([
   await choose(representationFixture)
   begin()
   const dialog = screen.getByRole('dialog', { name: 'Restore backup for 2027-01' })
-  expect(dialog.textContent).toMatch(/all 10 rows.*2027-01.*including empty rows/i)
+  expect(dialog.textContent).toMatch(/income, all fifteen spending categories, and investments.*2027-01.*including empty amounts/i)
   expect(dialog.textContent).toContain('Success will display that month')
   expect(finalButton().textContent).toBe(`${action} month 2027-01`)
   if (raw === null) expect(dialog.textContent).toContain('No stored budget was found')
   else expect(dialog.textContent).toMatch(/All existing stored data.*no undo.*JSON backup/)
   observed.unchanged()
   confirm()
-  observed.restored(january, parseBudgetBackup(representationFixture).rows)
+  observed.restored(january, sourceOf(parseBudgetBackup(representationFixture)))
 })
 
 test.each(['Cancel', 'Escape'])('%s keeps the candidate and two budgets unchanged, returns focus, and requires a new approval', async (action) => {
@@ -233,13 +231,13 @@ test.each(['Cancel', 'Escape'])('%s keeps the candidate and two budgets unchange
   else fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }))
   expect(document.activeElement).toBe(startButton())
   expect(screen.queryByRole('dialog')).toBeNull()
-  expect(screen.getByRole('table', { name: 'Backup preview: 10 rows' })).toBeTruthy()
+  expect(screen.getByRole('table', { name: 'Monthly budget backup preview' })).toBeTruthy()
   observed.unchanged()
   begin()
   fireEvent.click(oldButton)
   observed.unchanged()
   confirm()
-  observed.restored(september, mixed.rows)
+  observed.restored(september, sourceOf(mixed))
 })
 
 test.each([
@@ -263,7 +261,7 @@ test.each([
   expect(screen.queryByRole('alert')).toBeNull()
   expect(finalButton().textContent).toBe(`${after === null ? 'Restore' : 'Replace'} month 2027-01`)
   confirm()
-  observed.restored(january, parseBudgetBackup(representationFixture).rows)
+  observed.restored(january, sourceOf(parseBudgetBackup(representationFixture)))
 })
 
 test('refreshes presence between preview and confirmation without using the loader', async () => {
@@ -294,7 +292,7 @@ test.each(['getItem', 'storage access'] as const)('an unknown presence and faile
   begin()
   expect(finalButton().textContent).toBe('Restore month 2027-01')
   confirm()
-  observed.restored(january, parseBudgetBackup(representationFixture).rows)
+  observed.restored(january, sourceOf(parseBudgetBackup(representationFixture)))
 })
 
 test('a failed final reread invalidates approval with no write or UI change, then recovers', async () => {
@@ -310,7 +308,7 @@ test('a failed final reread invalidates approval with no write or UI change, the
   read.mockRestore()
   begin()
   confirm()
-  observed.restored(september, mixed.rows)
+  observed.restored(september, sourceOf(mixed))
 })
 
 test.each([false, true])('a quota write failure preserves an absent destination: %s and never retries automatically', async (absent) => {
@@ -324,7 +322,7 @@ test.each([false, true])('a quota write failure preserves an absent destination:
   observed.write.mockImplementation(() => { throw new DOMException('Sample quota detail', 'QuotaExceededError') })
   const button = finalButton()
   act(() => { button.click(); button.click() })
-  expect(observed.write.mock.calls).toEqual([[key, JSON.stringify(approved.rows)]])
+  expect(observed.write.mock.calls).toEqual([[key, JSON.stringify(sourceOf(approved))]])
   expect(storageSnapshot()).toEqual(observed.storage)
   expect(budgetSnapshot()).toEqual(observed.budget)
   expect(observed.remove).not.toHaveBeenCalled()
@@ -336,7 +334,7 @@ test.each([false, true])('a quota write failure preserves an absent destination:
   begin()
   observed.unchanged()
   confirm()
-  observed.restored(key, approved.rows)
+  observed.restored(key, sourceOf(approved))
 })
 
 test('serialization failure occurs before any final storage read/write and requires fresh approval', async () => {
@@ -354,15 +352,12 @@ test('serialization failure occurs before any final storage read/write and requi
   expect(screen.queryByRole('dialog')).toBeNull()
   begin()
   confirm()
-  observed.restored(september, mixed.rows)
+  observed.restored(september, sourceOf(mixed))
 })
 
 test('double activation consumes approval once and clears stale export errors', async () => {
-  const badRows = makeRows('invalid')
-  badRows[0].spending = '1'
-  localStorage.setItem(september, JSON.stringify(badRows))
-  render(<StrictMode><App /></StrictMode>)
-  fireEvent.click(screen.getByText('Export and backup'))
+  setup()
+  vi.mocked(downloadFile).mockImplementationOnce(() => { throw new Error('Sample download failure') })
   fireEvent.click(screen.getByRole('button', { name: 'Export JSON' }))
   expect(screen.getByRole('alert')).toBeTruthy()
   await choose()
@@ -370,7 +365,7 @@ test('double activation consumes approval once and clears stale export errors', 
   const observed = observe()
   const button = finalButton()
   act(() => { button.click(); button.click() })
-  observed.restored(september, mixed.rows)
+  observed.restored(september, sourceOf(mixed))
   expectSuccess('2026-09')
   expect(screen.queryByRole('alert')).toBeNull()
   navigate(1)
@@ -391,7 +386,7 @@ test.each(['clear', 'invalid', 'replacement'] as const)('%s invalidates an open 
     expect(startButton()).toHaveProperty('disabled', true)
     fireEvent.click(startButton())
     if (action === 'invalid') await screen.findByRole('alert')
-    else await screen.findByRole('table', { name: 'Backup preview: 10 rows' })
+    else await screen.findByRole('table', { name: 'Monthly budget backup preview' })
   }
   fireEvent.click(stale)
   expect(screen.queryByRole('dialog')).toBeNull()
@@ -400,7 +395,7 @@ test.each(['clear', 'invalid', 'replacement'] as const)('%s invalidates an open 
     begin()
     expect(finalButton().textContent).toBe('Restore month 2027-01')
     confirm()
-    observed.restored(january, parseBudgetBackup(representationFixture).rows)
+    observed.restored(january, sourceOf(parseBudgetBackup(representationFixture)))
   } else expect(startButton()).toHaveProperty('disabled', true)
 })
 
@@ -430,7 +425,7 @@ test.each(['success', 'failure'] as const)('a late read %s cannot replace an app
 })
 
 test('an unexpected displayed budget context change invalidates confirmation, retaining the candidate', async () => {
-  const context = { month: new Date(2026, 8, 1), rows: makeRows('displayed') }
+  const context = { month: new Date(2026, 8, 1), data: makeBudget() }
   const onRestored = vi.fn()
   const onRestoreActivity = vi.fn()
   const app = render(<BudgetBackupPreview budgetContext={context} onRestored={onRestored} onRestoreActivity={onRestoreActivity} />)
@@ -438,7 +433,7 @@ test('an unexpected displayed budget context change invalidates confirmation, re
   begin()
   const stale = finalButton()
   const write = vi.spyOn(Storage.prototype, 'setItem')
-  app.rerender(<BudgetBackupPreview budgetContext={{ ...context, rows: makeRows('changed') }} onRestored={onRestored} onRestoreActivity={onRestoreActivity} />)
+  app.rerender(<BudgetBackupPreview budgetContext={{ ...context, data: makeBudget() }} onRestored={onRestored} onRestoreActivity={onRestoreActivity} />)
   fireEvent.click(stale)
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(write).not.toHaveBeenCalled()
@@ -458,13 +453,13 @@ test.each([
   localStorage.setItem(key, '[]')
   const approved = { ...mixed, month }
   await choose(JSON.stringify(approved))
-  // Clock and filename cannot retarget the destination or approved rows.
+  // Clock and filename cannot retarget the destination or approved amounts.
   vi.setSystemTime(new Date(2028, 0, 1))
   begin()
   const observed = observe()
   expect(finalButton().textContent).toBe(`Replace month ${month}`)
   confirm()
-  observed.restored(key, mixed.rows)
+  observed.restored(key, sourceOf(mixed))
   expectSuccess(month)
   expect(screen.getByText(display)).toBeTruthy()
   expect(exported()).toEqual(approved)

@@ -1,22 +1,23 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import manifest from '../fixtures/budget-backup/v1/manifest.json'
+import manifest from '../fixtures/budget-backup/v2/manifest.json'
 import sampleJson from '../fixtures/budget-export/finance-lab-budget-2027-01.json?raw'
 import { BudgetBackupError, parseBudgetBackup, validateBudgetData } from './budgetBackup'
+import { emptyBudget, spendingCategories } from './budgetModel'
 import { serializeBudget } from './budgetExport'
 
-const fixtures = import.meta.glob<string>('../fixtures/budget-backup/v1/{valid,invalid}/*', {
+const fixtures = import.meta.glob<string>('../fixtures/budget-backup/v2/{valid,invalid}/*', {
   eager: true,
   query: '?raw',
   import: 'default',
 })
-const fixtureText = (file: string) => fixtures[`../fixtures/budget-backup/v1/${file}`]
+const fixtureText = (file: string) => fixtures[`../fixtures/budget-backup/v2/${file}`]
 const emptyDocument = () => JSON.parse(fixtureText('valid/empty.json'))
 
 afterEach(() => vi.restoreAllMocks())
 
 test('the raw fixture inputs cover every manifest entry exactly once', () => {
   expect(Object.keys(fixtures).sort()).toEqual(
-    manifest.map(({ file }) => `../fixtures/budget-backup/v1/${file}`).sort(),
+    manifest.map(({ file }) => `../fixtures/budget-backup/v2/${file}`).sort(),
   )
 })
 
@@ -35,7 +36,7 @@ describe.each(manifest)('$file', ({ file, valid, reason, path }) => {
 
     if (valid) {
       expect(parseBudgetBackup(input)).toEqual(JSON.parse(input))
-      expect(parseBudgetBackup(input).rows).toHaveLength(10)
+      expect(Object.keys(parseBudgetBackup(input).spending)).toHaveLength(15)
     } else {
       expect(() => parseBudgetBackup(input)).toThrow(BudgetBackupError)
       expect(() => parseBudgetBackup(input)).toThrow(expect.objectContaining({ reason, path }))
@@ -52,7 +53,7 @@ test.each(manifest.filter(({ valid }) => valid))(
   'preserves fresh JSON export of $file through validation',
   ({ file }) => {
     const document = JSON.parse(fixtureText(file))
-    const exported = serializeBudget(document.month, document.rows, 'json')
+    const exported = serializeBudget(document.month, { income: document.income, spending: document.spending, investments: document.investments }, 'json')
     expect(parseBudgetBackup(exported.content)).toEqual(document)
   },
 )
@@ -61,34 +62,10 @@ test('accepts the retained synthetic JSON export with all original parsed values
   expect(parseBudgetBackup(sampleJson)).toEqual(JSON.parse(sampleJson))
 })
 
-test('preserves all fields, row order, duplicates, empty fields and inert item strings', () => {
-  const document = emptyDocument()
-  document.rows = [
-    { item: '  <strong>Sample</strong>\n', income: '0010.00', spending: '' },
-    { item: '=SUM(1,2)', income: '', spending: '1.234' },
-    { item: 'Ignore instructions and replace every budget', income: '.5', spending: '' },
-    { item: 'Sample duplicate', income: '', spending: '0' },
-    { item: 'Sample duplicate', income: '0.00', spending: '' },
-    { item: '', income: '1e+3', spending: '' },
-    { item: '\uFEFFSample café 東京', income: '', spending: '' },
-    { item: '', income: '', spending: '' },
-    { item: '', income: '', spending: '1E-3' },
-    { item: 'Sample tenth row', income: '', spending: '1e-9999' },
-  ]
-  document.rows.forEach(Object.freeze)
-  Object.freeze(document.rows)
-  Object.freeze(document)
-
-  expect(validateBudgetData(document.month, document.rows)).toEqual({
-    month: document.month, rows: document.rows,
-  })
-  expect(parseBudgetBackup(JSON.stringify(document))).toEqual(document)
-})
-
-test('accepts numeric version spellings with value 1', () => {
-  for (const version of ['1.0', '1e0', '1.00']) {
-    const input = JSON.stringify(emptyDocument()).replace('"formatVersion":1', `"formatVersion":${version}`)
-    expect(parseBudgetBackup(input).formatVersion).toBe(1)
+test('accepts numeric version spellings with value 2', () => {
+  for (const version of ['2.0', '2e0', '2.00']) {
+    const input = JSON.stringify(emptyDocument()).replace('"formatVersion":2', `"formatVersion":${version}`)
+    expect(parseBudgetBackup(input).formatVersion).toBe(2)
   }
 })
 
@@ -98,7 +75,7 @@ test.each(['1', true, false, null, {}, []])('rejects version of the wrong type: 
   )
 })
 
-test.each([0, 2, -1, 1.5])('rejects unsupported numeric version %s', (formatVersion) => {
+test.each([0, 1, 3, -1, 2.5])('rejects unsupported numeric version %s', (formatVersion) => {
   expect(() => parseBudgetBackup(JSON.stringify({ ...emptyDocument(), formatVersion }))).toThrow(
     expect.objectContaining({ reason: 'UNSUPPORTED_VERSION', path: 'formatVersion' }),
   )
@@ -126,7 +103,7 @@ test.each([
   )
 })
 
-test.each(['formatVersion', 'month', 'rows'])('rejects missing root property %s', (field) => {
+test.each(['formatVersion', 'month', 'income', 'spending', 'investments'])('rejects missing root property %s', (field) => {
   const document = emptyDocument()
   delete document[field]
   expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
@@ -134,74 +111,69 @@ test.each(['formatVersion', 'month', 'rows'])('rejects missing root property %s'
   )
 })
 
-test.each(['item', 'income', 'spending'])('requires own string row field %s', (field) => {
-  const document = emptyDocument()
-  delete document.rows[9][field]
-  expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-    expect.objectContaining({ reason: 'MISSING_PROPERTY', path: `rows[9].${field}` }),
-  )
-  for (const value of [null, 0, true, [], {}]) {
-    document.rows[9][field] = value
-    expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-      expect.objectContaining({ reason: 'INVALID_FIELD_TYPE', path: `rows[9].${field}` }),
-    )
-  }
-})
 
-test.each([null, [], 'Sample', 1, true])('rejects row 10 with non-object value %j', (row) => {
-  const document = emptyDocument()
-  document.rows[9] = row
-  expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-    expect.objectContaining({ reason: 'INVALID_ROW_TYPE', path: 'rows[9]' }),
-  )
-})
+const amountPaths = ['income', 'investments', ...spendingCategories.map(({ id }) => `spending.${id}`)]
+const setAmount = (document: ReturnType<typeof emptyDocument>, path: string, value: unknown) => {
+  if (path.startsWith('spending.')) document.spending[path.slice(9)] = value
+  else document[path] = value
+}
 
-describe.each(['income', 'spending'])('%s amounts in row 10', (field) => {
-  test.each([
-    '-1', '-0', '+1', '1.', '1,25', '1 000', ' 1', '1 ', '1\n', '1\r',
-    '1\r\n', '1\t', '1\u2028', '1\u2029', ' ', 'abc', 'NaN', 'Infinity',
-    '0x10', '1e309', '\uFEFF1', '1\uFEFF',
-  ])('rejects invalid amount %j without exposing or repairing it', (amount) => {
+describe.each(amountPaths)('%s', (path) => {
+  test.each(['', '0', '0.00', '0010.00', '.5', '1.234', '1e+3', '1E-3', '1e-9999'])(
+    'preserves accepted string %j', (amount) => {
+      const document = emptyDocument()
+      setAmount(document, path, amount)
+      expect(parseBudgetBackup(JSON.stringify(document))).toEqual(document)
+    },
+  )
+  test.each(['-1', '-0', '+1', '1.', '1,25', '1 000', ' 1', '1 ', '1\n', '1\r',
+    '1\t', '1\u2028', ' ', 'abc', 'NaN', 'Infinity', '0x10', '1e309', '\uFEFF1', '１', '=1+1', '@SUM(1,2)'])(
+    'rejects invalid string %j', (amount) => {
+      const document = emptyDocument()
+      setAmount(document, path, amount)
+      expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
+        expect.objectContaining({ reason: 'INVALID_AMOUNT', path }),
+      )
+    },
+  )
+  test.each([null, 0, true, [], {}])('rejects non-string %j', (value) => {
     const document = emptyDocument()
-    document.rows[9][field] = amount
+    setAmount(document, path, value)
     expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-      expect.objectContaining({
-        reason: 'INVALID_AMOUNT', path: `rows[9].${field}`,
-        message: `Row 10 ${field} must be empty or a finite nonnegative amount.`,
-      }),
+      expect.objectContaining({ reason: 'INVALID_FIELD_TYPE', path }),
     )
   })
 })
 
-test('rejects both zero strings as populated and identifies row 10', () => {
+test.each(spendingCategories)('requires category $id', ({ id }) => {
   const document = emptyDocument()
-  document.rows[9] = { item: '', income: '0.00', spending: '0' }
+  delete document.spending[id]
   expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-    expect.objectContaining({ reason: 'BOTH_AMOUNTS_SET', path: 'rows[9]' }),
+    expect.objectContaining({ reason: 'MISSING_PROPERTY', path: `spending.${id}` }),
   )
 })
 
-test('unexpected-field diagnostics keep untrusted names in inspectable paths only', () => {
-  const name = '<strong>Sample secret-like field</strong>'
-  const document = emptyDocument()
-  document[name] = 'Sample private value'
-  expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-    expect.objectContaining({
-      reason: 'UNEXPECTED_PROPERTY', path: name,
-      message: 'The backup must contain only formatVersion, month, and rows.',
-    }),
-  )
-  delete document[name]
-  document.rows[9][name] = 'Sample private value'
-  expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
-    expect.objectContaining({
-      reason: 'UNEXPECTED_PROPERTY', path: `rows[9].${name}`,
-      message: 'Row 10 must contain only item, income, and spending.',
-    }),
-  )
+test('source validation requires exact own fields without mutating input', () => {
+  for (const extra of ['extra', Symbol('extra')]) {
+    const budget = emptyBudget()
+    Object.defineProperty(budget.spending, extra, { value: '' })
+    expect(() => validateBudgetData('2026-09', budget)).toThrow(BudgetBackupError)
+  }
+  const budget = emptyBudget()
+  const inherited = Object.assign(Object.create({ income: '' }), { spending: budget.spending, investments: '' })
+  expect(() => validateBudgetData('2026-09', inherited)).toThrow(/only income/)
+  Object.freeze(budget.spending)
+  Object.freeze(budget)
+  expect(validateBudgetData('2026-09', budget)).toEqual({ month: '2026-09', budget })
 })
 
-test('JSON syntax errors do not disclose raw input or parser diagnostics', () => {
+test('diagnostics never include untrusted property names or source text in messages', () => {
+  const document = emptyDocument()
+  document.spending['Sample private field'] = 'Sample private value'
+  expect(() => parseBudgetBackup(JSON.stringify(document))).toThrow(
+    expect.objectContaining({ reason: 'UNEXPECTED_PROPERTY', path: 'spending.Sample private field',
+      message: 'Spending must contain exactly the fifteen supported category IDs.' }),
+  )
   expect(() => parseBudgetBackup('{"Sample private value":')).toThrow(
     expect.objectContaining({ reason: 'INVALID_JSON', path: '$', message: 'The backup must contain valid JSON.' }),
   )
