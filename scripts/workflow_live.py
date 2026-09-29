@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 from urllib.parse import quote
 
-from scripts.workflow_controller import dry_run
+from scripts.workflow_controller import dry_run, read_pr_snapshot
 
 
 ISSUE_QUERY = """
@@ -58,6 +58,7 @@ mutation($input: UpdateProjectV2ItemFieldValueInput!) {
 
 
 READ_FAILURES = {
+    "pr_recheck": "Cannot recheck current PR snapshot; no writes.",
     "repository_read": "Cannot read repository issue/labels; no writes.",
     "project_query": (
         "Cannot query Project state or resolve the Project node; check access/configuration; no writes."
@@ -146,6 +147,9 @@ def next_page(connection, seen):
 
 
 class GitHub:
+    def read_pr(self, repository, number):
+        return read_pr_snapshot(repository, number)
+
     def read(self, repository, number, project):
         """Read all labels and Project memberships before allowing any write."""
         owner, name = repository.split("/")
@@ -228,8 +232,15 @@ class GitHub:
             raise LookupError
 
 
+def pr_fingerprint(snapshot):
+    """Only lifecycle-relevant state authorizes writes; updated_at is evidence."""
+    return tuple(snapshot[key] for key in (
+        "number", "state", "draft", "merged", "head_sha", "closing_issues",
+    ))
+
+
 def apply_decision(evidence, repository, project, done_owner, api):
-    """Diff the #41 intent against current state; do not remap PR events."""
+    """Diff current-state intent, then guard the first write with its fingerprint."""
     result = {**evidence, "dry_run": False, "outcome": "no-op", "writes": []}
     if evidence["decision"] != "action":
         return result
@@ -258,6 +269,13 @@ def apply_decision(evidence, repository, project, done_owner, api):
         if add_review and not state["review_id"]:
             raise ReadFailure("workflow_label_lookup")
         update_status = manage_status and state["status"] != state["options"][status]
+        if remove or update_status or add_review:
+            with read_stage("pr_recheck"):
+                current_pr = api.read_pr(repository, evidence["pr_number"])
+            if pr_fingerprint(current_pr) != pr_fingerprint(evidence["snapshot"]):
+                result.update(diagnostic="stale_snapshot",
+                              reason="PR snapshot changed before mutation; no writes. Rerun to reconcile current state.")
+                return result
     except ReadFailure as failure:
         result.update(outcome="error", diagnostic=failure.code, reason=READ_FAILURES[failure.code])
         return result

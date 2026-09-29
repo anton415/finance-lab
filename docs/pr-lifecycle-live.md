@@ -1,15 +1,25 @@
 # Live PR lifecycle updates
 
-[Issue #82](https://github.com/anton415/finance-lab/issues/82) adds
+[Issue #94](https://github.com/anton415/finance-lab/issues/94) updates
 [`scripts/workflow_live.py`](../scripts/workflow_live.py) around the accepted
-[#41 dry-run](pr-lifecycle-dry-run.md). `dry_run()` remains the only source of
-event mapping, issue resolution, and label intentions. The live adapter reads
-current state and applies the difference. The original dry-run CLI stays read-only.
+[dry-run](pr-lifecycle-dry-run.md) and #82 live adapter. `dry_run()` uses
+`desired_pr_status(state, draft, merged)` from #97 for the lifecycle decision.
+Events are wake-up signals; the current PR snapshot determines the target and
+intent. The live adapter reads issue/Project state and applies the difference.
+The original dry-run CLI stays read-only.
 
 ## Behavior
 
-The adapter resolves exactly one same-repository closing issue through GitHub's
-relationship, then reads all issue labels and Project memberships. Only the
+The controller reads PR number, state, draft/merged flags, head SHA, `updatedAt`,
+and closing issue references together with one fixed GraphQL query. GraphQL's
+`MERGED` state is normalized to `closed` for the #97 core. If references need
+pagination, every page repeats the lifecycle fields; a state or head SHA change
+discards the whole read. `updatedAt` remains evidence only: conversation activity
+can change it without affecting the lifecycle decision. References are deduplicated
+and sorted for stable comparison.
+
+The adapter resolves exactly one current same-repository closing issue through
+that snapshot, then reads all issue labels and Project memberships. Only the
 existing, unarchived issue item in the configured Project is eligible. It reads
 the Project's `Status` field, available options, and the item's current value.
 It never adds an item, creates a field/option/label, or infers targets from PR text.
@@ -17,11 +27,22 @@ Desired Status names match Project option names case-insensitively (for example,
 `In progress` matches `In Progress`); comparisons and writes use the actual option
 ID. Zero or multiple matches fail with `status_validation` before any mutation.
 
+| Current PR state | Desired issue Status | Desired workflow labels |
+| --- | --- | --- |
+| Open, draft | In Progress | None |
+| Open, ready | Review | Only `needs:review` |
+| Closed, merged | Done via configured owner | None |
+| Closed, unmerged | Unchanged | Unchanged |
+
 For an action, all reads and configuration checks finish before any mutation:
 
 1. Calculate desired workflow labels from the dry-run intent.
-2. If that would leave multiple `needs:*` labels, log a no-op requiring human
-   correction. Do not choose an arbitrary label to keep.
+2. When writes are needed, reread the PR snapshot immediately before the first
+   mutation. Compare number, state, draft/merged flags, head SHA, and all closing
+   references. A timestamp-only change does not block writes. A change to any
+   fingerprint field returns `outcome: no-op`,
+   `diagnostic: stale_snapshot`, and `writes: []`. A failed recheck exits 1 with
+   `diagnostic: pr_recheck` and no writes.
 3. Remove only obsolete workflow labels, with one REST request per label.
 4. Set Status only when needed and owned by this adapter.
 5. Add `needs:review` only when missing, after conflicting labels are removed.
@@ -32,11 +53,19 @@ converge without a deduplication store. Missing/ambiguous closing relationships
 and closed-unmerged PRs remain logged no-ops, with no Project reads or mutations.
 Incomplete state, missing configuration, or API failures stop writes and exit 1.
 
+Wake-ups are `opened`, `edited`, `synchronize`, `ready_for_review`,
+`converted_to_draft`, `reopened`, and `closed`. For example, a delayed
+`ready_for_review` observes a currently draft PR and clears all workflow labels.
+`synchronize` on a ready PR restores `needs:review` after a human handoff.
+An edited relationship reconciles only the current target; the previously linked
+issue is not changed automatically.
+
 The workflow serializes runs for the same PR without cancelling a running write.
 GitHub concurrency is not a durable event queue; newer pending runs can replace
-older pending runs. The adapter implements the received event's accepted intent.
-It does not replay history or reconcile manual edits made concurrently with an
-API write. Before manually rerunning an old event, confirm it is still relevant.
+older pending runs. A stale job does not retry internally; a later event or
+explicit rerun rereads current state. The fingerprint check is a pre-write guard,
+not an atomic transaction across GitHub APIs: a change after the check or a
+concurrent manual issue edit can still require a later reconciliation.
 
 ## Human configuration and Done ownership
 
@@ -68,7 +97,7 @@ The Project must contain a single-select `Status` field with `In progress` and
 `needs:review` label must already exist. Field and option IDs are discovered from
 the Project, so they do not need separate variables. Ensure controlled issues
 are added to the Project before generating events. A missing item fails safely;
-rerun a still-relevant event after adding the item.
+rerun an event after adding the item; its current snapshot determines the action.
 
 ## Permissions and trusted code
 
@@ -78,7 +107,8 @@ GraphQL. Label writes use the [issue-label REST API](https://docs.github.com/en/
 `DELETE /repos/{owner}/{repo}/issues/{number}/labels/{name}` removes each obsolete
 workflow label; `POST /repos/{owner}/{repo}/issues/{number}/labels` adds only
 `needs:review`. Other labels are preserved. The workflow supplies this repository
-token as `GH_TOKEN`; `PROJECT_TOKEN` is removed from label subprocess environments.
+token as `GH_TOKEN`; `PROJECT_TOKEN` is removed from repository-read and label
+subprocess environments, including both PR snapshot reads.
 There is no repository-content write, PR write, Actions write, or merge permission.
 
 Project reads and Status writes stay on GraphQL using only `LIFECYCLE_PROJECT_TOKEN`.
@@ -108,6 +138,7 @@ Read failures include a fixed `diagnostic` code and a sanitized `reason`:
 
 | Diagnostic | Failed stage |
 | --- | --- |
+| `pr_recheck` | Current PR fingerprint could not be read completely before mutation |
 | `repository_read` | Repository issue/label query, response validation, or label pagination |
 | `project_query` | Project query (including token authorization failures), or missing/wrong-type Project node |
 | `project_membership` | Missing, ambiguous, malformed, or incompletely paginated item membership |
@@ -132,16 +163,18 @@ Controlled tests use only synthetic fixtures and intercepted GitHub APIs:
 .venv/bin/python -m tests.python.check_workflow_controller
 ```
 
-They cover the ten accepted fixtures, minimal/idempotent mutations, both Done
+They cover the 16 [controlled fixtures](../fixtures/pr-lifecycle/cases.json), minimal/idempotent mutations, both Done
 owners, label invariants, pagination, incomplete reads, API failures, retries at
 each write (including uncertain success), credentials, and structured CLI output.
-CI runs the same lifecycle test suite on Python 3.12.
+CI runs the same lifecycle test suite on Python 3.12. See the
+[fixture evidence and post-merge procedure](pr-lifecycle-current-state-verification.md)
+for the exact replay command and #94 rollout requirements.
 
 After human review and merge deploy the adapter to trusted `main`, configure
 the settings above and exercise synthetic, disposable issues already in the
 Project. Use a PR with one GitHub-recognized same-repository closing relationship:
 
-1. Open a draft: inspect `In progress` and cleared `needs:implementation`.
+1. Open a draft: inspect `In progress` and no `needs:*` labels.
 2. Mark ready: inspect `Review` and only `needs:review`.
 3. Rerun that workflow before another transition: expect `outcome: no-op`,
    `writes: []`, and unchanged Project/labels.
@@ -151,9 +184,10 @@ Project. Use a PR with one GitHub-recognized same-repository closing relationshi
    confirm the state is unchanged and the log reports a no-op.
 
 Record run URLs, observed Project Status/labels, and the repeated-run evidence.
-Local fixtures and read-only API checks do not establish this live acceptance
-criterion. Keep #82 open until the real controlled lifecycle is verified; use a
-closing keyword only after its full acceptance criteria are satisfied.
+Local fixtures and read-only API checks do not establish live acceptance. #94
+also requires a delayed/reordered or edited-relationship scenario after merge to
+trusted `main`, with exact run IDs and observed writes/no-writes. Final merge and
+acceptance of that live evidence remain human-owned.
 
 To disable live execution, remove `LIFECYCLE_PROJECT_ID`; future runs return to
 dry-run. Inspect any already-running job before making manual state corrections.

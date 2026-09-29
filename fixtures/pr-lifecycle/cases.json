@@ -1,62 +1,106 @@
 [
   {
     "name": "opened draft",
-    "action": "opened", "draft": true, "merged": false,
+    "action": "opened", "state": "open", "draft": true, "merged": false,
     "issues": [23],
-    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": ["needs:implementation"], "clear_all": false, "resolution": "resolved"}
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "opened ready",
-    "action": "opened", "draft": false, "merged": false,
+    "action": "opened", "state": "open", "draft": false, "merged": false,
     "issues": [23],
     "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "ready for review",
-    "action": "ready_for_review", "draft": false, "merged": false,
+    "action": "ready_for_review", "state": "open", "draft": false, "merged": false,
     "issues": [23],
     "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "converted to draft",
-    "action": "converted_to_draft", "draft": true, "merged": false,
+    "action": "converted_to_draft", "state": "open", "draft": true, "merged": false,
     "issues": [23],
-    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": ["needs:review", "needs:human"], "clear_all": false, "resolution": "resolved"}
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "reopened draft",
-    "action": "reopened", "draft": true, "merged": false,
+    "action": "reopened", "state": "open", "draft": true, "merged": false,
     "issues": [23],
-    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": false, "resolution": "resolved"}
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "reopened ready",
-    "action": "reopened", "draft": false, "merged": false,
+    "action": "reopened", "state": "open", "draft": false, "merged": false,
     "issues": [23],
     "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "merged close",
-    "action": "closed", "draft": false, "merged": true,
+    "action": "closed", "state": "closed", "draft": false, "merged": true,
     "issues": [23],
     "expected": {"decision": "action", "status": "Done", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
   },
   {
     "name": "unmerged close",
-    "action": "closed", "draft": false, "merged": false,
+    "action": "closed", "state": "closed", "draft": false, "merged": false,
     "issues": [23],
     "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "resolved"}
   },
   {
     "name": "no closing issue",
-    "action": "opened", "draft": false, "merged": false,
+    "action": "opened", "state": "open", "draft": false, "merged": false,
     "issues": [],
     "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "missing"}
   },
   {
     "name": "multiple closing issues",
-    "action": "opened", "draft": false, "merged": false,
+    "action": "opened", "state": "open", "draft": false, "merged": false,
     "issues": [23, 24],
     "expected": {"decision": "no-op", "status": null, "add": [], "remove": [], "clear_all": false, "resolution": "ambiguous"}
+  },
+  {
+    "name": "delayed ready event observes current draft",
+    "action": "ready_for_review", "state": "open", "draft": true, "merged": false,
+    "issues": [23],
+    "event_draft": false,
+    "expected": {"decision": "action", "status": "In progress", "add": [], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "delayed draft event observes current ready",
+    "action": "converted_to_draft", "state": "open", "draft": false, "merged": false,
+    "issues": [23],
+    "event_draft": true,
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "edited closing relationship uses current target",
+    "action": "edited", "state": "open", "draft": false, "merged": false,
+    "issues": [24],
+    "event_issues": [23],
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "synchronize restores review after human handoff",
+    "action": "synchronize", "state": "open", "draft": false, "merged": false,
+    "issues": [23],
+    "initial_labels": ["learning", "needs:human"],
+    "initial_status": "Review",
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "synchronize keeps existing review handoff",
+    "action": "synchronize", "state": "open", "draft": false, "merged": false,
+    "issues": [23],
+    "initial_labels": ["learning", "needs:review"],
+    "initial_status": "Review",
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
+  },
+  {
+    "name": "fingerprint changes before write",
+    "action": "ready_for_review", "state": "open", "draft": false, "merged": false,
+    "issues": [23],
+    "recheck": {"head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+    "expected": {"decision": "action", "status": "Review", "add": ["needs:review"], "remove": [], "clear_all": true, "resolution": "resolved"}
   }
 ]

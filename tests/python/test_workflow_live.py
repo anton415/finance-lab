@@ -11,7 +11,10 @@ import unittest
 from unittest.mock import Mock, patch
 
 from scripts import workflow_live as live
-from test_workflow_controller import CASES, REPOSITORY, RUN, SENTINEL, decide, event_for, gh_result
+from scripts.workflow_controller import PR_SNAPSHOT_QUERY
+from test_workflow_controller import (
+    CASES, REPOSITORY, RUN, SENTINEL, decide, event_for, gh_result, issue, pr_snapshot, response,
+)
 
 
 PROJECT = "PVT_synthetic"
@@ -29,13 +32,18 @@ def snapshot(status="Ready", labels=("learning", "needs:implementation")):
 
 
 class FakeGitHub:
-    def __init__(self, state=None):
+    def __init__(self, state=None, pr=None):
+        self.pr = deepcopy(pr or pr_snapshot(CASES[1]))
         self.state = deepcopy(state or snapshot())
         self.calls = []
 
     def read(self, repository, number, project):
         self.calls.append(("read", repository, number, project))
         return deepcopy(self.state)
+
+    def read_pr(self, repository, number):
+        self.calls.append(("recheck", repository, number))
+        return deepcopy(self.pr)
 
     def remove_labels(self, state, names):
         self.calls.append(("remove", names))
@@ -53,34 +61,99 @@ class FakeGitHub:
 
 
 def apply(case, api, done_owner="controller"):
-    evidence = decide(event_for(case), Mock(return_value=case["issues"]))
+    evidence = decide(event_for(case), Mock(return_value=pr_snapshot(case)))
     return live.apply_decision(evidence, REPOSITORY, PROJECT, done_owner, api)
 
 
+def fixture_api(case):
+    return FakeGitHub(
+        snapshot(case.get("initial_status", "Ready"),
+                 case.get("initial_labels", ("learning", "needs:implementation"))),
+        {**pr_snapshot(case), **case.get("recheck", {})},
+    )
+
+
 class ApplyTests(unittest.TestCase):
+    def test_each_fingerprint_change_blocks_every_write(self):
+        changes = [
+            {"number": 18},
+            {"head_sha": "b" * 40},
+            {"closing_issues": []},
+            {"closing_issues": [{"repository": REPOSITORY, "number": 24}]},
+            {"closing_issues": [{"repository": REPOSITORY, "number": 23},
+                                {"repository": "other/repo", "number": 24}]},
+        ]
+        for case in (CASES[0], CASES[1], CASES[6]):
+            state_changes = [{"draft": not case["draft"]}, {"merged": not case["merged"]},
+                             {"state": "open" if case["state"] == "closed" else "closed"}]
+            for change in changes + state_changes:
+                for owner in ("controller", "project"):
+                    with self.subTest(case=case["name"], change=change, owner=owner):
+                        api = FakeGitHub(pr={**pr_snapshot(case), **change})
+                        original = deepcopy(api.state)
+                        result = apply(case, api, owner)
+                        self.assertEqual(result["outcome"], "no-op")
+                        self.assertEqual(result["diagnostic"], "stale_snapshot")
+                        self.assertEqual(result["writes"], [])
+                        self.assertEqual(api.state, original)
+                        self.assertEqual([call[0] for call in api.calls], ["read", "recheck"])
+
+    def test_timestamp_only_change_allows_writes_and_keeps_snapshot_evidence(self):
+        for case in (CASES[0], CASES[1], CASES[6]):
+            for owner in ("controller", "project"):
+                with self.subTest(case=case["name"], owner=owner):
+                    api = fixture_api(case)
+                    api.pr["updated_at"] = "2026-01-01T00:00:01Z"
+                    result = apply(case, api, owner)
+                    self.assertEqual(result["outcome"], "updated")
+                    self.assertNotIn("diagnostic", result)
+                    self.assertEqual(result["snapshot"]["updated_at"], "2026-01-01T00:00:00Z")
+                    expected_writes = ["remove_workflow_labels"]
+                    if case["expected"]["status"] != "Done" or owner == "controller":
+                        expected_writes.append("set_status")
+                    if case["expected"]["status"] == "Review":
+                        expected_writes.append("add_needs_review")
+                    self.assertEqual(result["writes"], expected_writes)
+                    self.assertEqual(apply(case, api, owner)["writes"], [])
+
+    def test_recheck_failure_is_sanitized_and_prevents_every_write(self):
+        api = fixture_api(CASES[1])
+        api.read_pr = Mock(side_effect=LookupError(SENTINEL))
+        original = deepcopy(api.state)
+        result = apply(CASES[1], api)
+        self.assertEqual((result["outcome"], result["diagnostic"]), ("error", "pr_recheck"))
+        self.assertEqual(result["writes"], [])
+        self.assertEqual(api.state, original)
+        self.assertNotIn(SENTINEL, json.dumps(result))
+
     def test_all_accepted_fixtures_and_repeated_deliveries(self):
         for case in CASES:
             with self.subTest(case=case["name"]):
-                api = FakeGitHub()
+                api = fixture_api(case)
                 original = deepcopy(api.state)
                 result = apply(case, api)
                 expected = case["expected"]
                 if expected["decision"] == "no-op":
                     self.assertEqual(api.calls, [])
                     self.assertEqual(api.state, original)
+                elif "recheck" in case:
+                    self.assertEqual(result["diagnostic"], "stale_snapshot")
+                    self.assertEqual(result["writes"], [])
+                    self.assertEqual(api.state, original)
+                    self.assertEqual([call[0] for call in api.calls], ["read", "recheck"])
                 else:
-                    self.assertEqual(api.calls[0], ("read", REPOSITORY, 23, PROJECT))
+                    self.assertEqual(api.calls[0], ("read", REPOSITORY, case["issues"][0], PROJECT))
                     self.assertEqual(api.state["status"], api.state["options"][expected["status"]])
                     labels = {"needs:implementation"} if not expected["clear_all"] else set()
                     labels.difference_update(expected["remove"])
                     labels.update(expected["add"])
                     self.assertEqual(set(api.state["labels"]), labels | {"learning"})
-                    self.assertEqual(result["outcome"], "updated")
+                    self.assertEqual(result["outcome"], "updated" if original != api.state else "no-op")
                 api.calls.clear()
                 again = apply(case, api)
                 self.assertEqual(again["outcome"], "no-op")
                 self.assertEqual(again["writes"], [])
-                self.assertTrue(all(call[0] == "read" for call in api.calls))
+                self.assertTrue(all(call[0] in ("read", "recheck") for call in api.calls))
 
     def test_already_satisfied_status_or_labels_are_independently_skipped(self):
         cases = [
@@ -93,16 +166,16 @@ class ApplyTests(unittest.TestCase):
             with self.subTest(operations=operations):
                 api = FakeGitHub(state)
                 apply(CASES[1], api)
-                self.assertEqual([call[0] for call in api.calls[1:]], operations)
+                self.assertEqual([call[0] for call in api.calls[1:]], (["recheck"] if operations else []) + operations)
 
     def test_draft_with_case_variant_status_only_removes_label_and_retry_is_noop(self):
         state = snapshot("In progress")
         state["options"]["In Progress"] = state["options"].pop("In progress")
-        api = FakeGitHub(state)
+        api = FakeGitHub(state, pr_snapshot(CASES[0]))
         result = apply(CASES[0], api)
         self.assertEqual(result["outcome"], "updated")
         self.assertEqual(result["writes"], ["remove_workflow_labels"])
-        self.assertEqual([call[0] for call in api.calls], ["read", "remove"])
+        self.assertEqual([call[0] for call in api.calls], ["read", "recheck", "remove"])
         self.assertEqual(api.state["status"], state["status"])
         self.assertEqual(api.state["options"], state["options"])
         self.assertEqual(set(api.state["labels"]), {"learning"})
@@ -115,32 +188,21 @@ class ApplyTests(unittest.TestCase):
     def test_replace_conflicting_labels_removes_before_adding_and_preserves_metadata(self):
         api = FakeGitHub(snapshot(labels=("learning", "needs:human", "needs:spec", "needs:custom")))
         result = apply(CASES[1], api)
-        self.assertEqual([call[0] for call in api.calls], ["read", "remove", "status", "add"])
+        self.assertEqual([call[0] for call in api.calls], ["read", "recheck", "remove", "status", "add"])
         self.assertEqual(set(api.state["labels"]), {"learning", "needs:review"})
         self.assertEqual(result["outcome"], "updated")
 
-    def test_draft_clears_only_the_accepted_labels(self):
-        for label in ("needs:review", "needs:human"):
-            api = FakeGitHub(snapshot("Review", ("learning", label)))
-            apply(CASES[3], api)
+    def test_current_draft_clears_every_workflow_label(self):
+        for case in (CASES[0], CASES[3], CASES[4]):
+            api = FakeGitHub(snapshot("Review", ("learning", "needs:human", "needs:spec", "needs:custom")),
+                             pr_snapshot(case))
+            result = apply(case, api)
             self.assertEqual(set(api.state["labels"]), {"learning"})
-        for case, label in ((CASES[0], "needs:spec"), (CASES[4], "needs:human")):
-            api = FakeGitHub(snapshot(labels=("learning", label)))
-            apply(case, api)
-            self.assertEqual(set(api.state["labels"]), {"learning", label})
-
-    def test_unresolvable_label_conflict_is_noop(self):
-        api = FakeGitHub(snapshot(labels=("learning", "needs:human", "needs:spec")))
-        original = deepcopy(api.state)
-        result = apply(CASES[4], api)
-        self.assertEqual(result["outcome"], "no-op")
-        self.assertIn("human correction", result["reason"])
-        self.assertEqual(api.state, original)
-        self.assertEqual(len(api.calls), 1)
+            self.assertEqual(result["outcome"], "updated")
 
     def test_builtin_done_never_writes_status_even_before_builtin_runs(self):
         for status in ("Review", "Done"):
-            api = FakeGitHub(snapshot(status, ("learning", "needs:human", "needs:custom")))
+            api = FakeGitHub(snapshot(status, ("learning", "needs:human", "needs:custom")), pr_snapshot(CASES[6]))
             original_status = api.state["status"]
             result = apply(CASES[6], api, "project")
             self.assertEqual(api.state["status"], original_status)
@@ -168,7 +230,7 @@ class ApplyTests(unittest.TestCase):
                     self.assertEqual(result["diagnostic"],
                                      "status_validation" if missing == "options" else "workflow_label_lookup")
         api = Mock()
-        evidence = decide(event_for(CASES[0]), Mock(return_value=[23]))
+        evidence = decide(event_for(CASES[0]), Mock(return_value=pr_snapshot()))
         for project, owner in (("", "project"), (PROJECT, ""), (PROJECT, "both")):
             result = live.apply_decision(evidence, REPOSITORY, project, owner, api)
             self.assertEqual(result["outcome"], "error")
@@ -228,6 +290,11 @@ def project_data(items=None):
 
 
 class ApiTests(unittest.TestCase):
+    def setUp(self):
+        self.recheck = patch.object(live, "read_pr_snapshot", return_value=pr_snapshot(CASES[1]))
+        self.recheck_mock = self.recheck.start()
+        self.addCleanup(self.recheck.stop)
+
     def assert_read_failure(self, pages, diagnostic):
         with patch.object(live, "graphql", side_effect=pages) as api:
             result = apply(CASES[1], live.GitHub())
@@ -266,6 +333,7 @@ class ApiTests(unittest.TestCase):
         self.assert_read_failure([data, project_data()], "workflow_label_lookup")
 
     def test_absent_review_label_and_unset_status_remain_valid_for_draft(self):
+        self.recheck_mock.return_value = pr_snapshot(CASES[0])
         issue, project = issue_data(), project_data()
         issue["repository"]["label"] = None
         project["issue"]["projectItems"]["nodes"][0]["fieldValueByName"] = None
@@ -328,6 +396,7 @@ class ApiTests(unittest.TestCase):
                 self.assert_read_failure([issue_data(), data], "status_validation")
 
     def test_status_exact_and_case_variant_names_use_the_project_option_id(self):
+        self.recheck_mock.return_value = pr_snapshot(CASES[0])
         for name in ("In progress", "In Progress"):
             with self.subTest(name=name):
                 project = project_data()
@@ -500,6 +569,44 @@ class ApiTests(unittest.TestCase):
                     self.assertEqual(mutations, [])
 
 
+class SnapshotIntegrationTests(unittest.TestCase):
+    def test_snapshot_read_and_recheck_use_repository_credentials_before_first_mutation(self):
+        current = response([issue(23)], case=CASES[1])
+        for change, stale in (({}, False), ({"updatedAt": "2026-01-01T00:00:01Z"}, False),
+                              ({"isDraft": True}, True)):
+            with self.subTest(change=change):
+                rechecked = deepcopy(current)
+                rechecked["data"]["repository"]["pullRequest"].update(change)
+                replies = [gh_result(current), gh_result({"data": issue_data()}),
+                           gh_result({"data": project_data()}), gh_result(rechecked)]
+                if not stale:
+                    replies += [gh_result([{"name": "learning"}]),
+                                gh_result({"data": {"updateProjectV2ItemFieldValue": {
+                                    "projectV2Item": {"id": "PVTI_synthetic"}}}}),
+                                gh_result([{"name": "learning"}, {"name": "needs:review"}])]
+                env = {"GH_TOKEN": "REPO_TOKEN_SYNTHETIC", "PROJECT_TOKEN": "PROJECT_TOKEN_SYNTHETIC"}
+                with patch.dict(live.os.environ, env, clear=True), \
+                        patch.object(live.subprocess, "run", side_effect=replies) as run:
+                    evidence = decide(event_for(CASES[1]))
+                    result = live.apply_decision(evidence, REPOSITORY, PROJECT, "controller", live.GitHub())
+                calls = run.call_args_list
+                self.assertEqual(len(calls), len(replies))
+                for index in (0, 3):
+                    payload = json.loads(calls[index].kwargs["input"])
+                    self.assertEqual(payload["query"], PR_SNAPSHOT_QUERY)
+                    self.assertEqual(calls[index].kwargs["env"]["GH_TOKEN"], env["GH_TOKEN"])
+                    self.assertNotIn("PROJECT_TOKEN", calls[index].kwargs["env"])
+                    self.assertNotIn("shell", calls[index].kwargs)
+                self.assertEqual(calls[2].kwargs["env"]["GH_TOKEN"], env["PROJECT_TOKEN"])
+                self.assertEqual(result["outcome"], "no-op" if stale else "updated")
+                if stale:
+                    self.assertEqual(result["diagnostic"], "stale_snapshot")
+                    self.assertEqual(result["writes"], [])
+                else:
+                    self.assertEqual(calls[4].args[0][3], "DELETE")
+                    self.assertEqual(result["writes"], ["remove_workflow_labels", "set_status", "add_needs_review"])
+
+
 class CliTests(unittest.TestCase):
     def invoke(self, case, env_extra=None, lookup=None, api=None):
         with tempfile.TemporaryDirectory() as directory:
@@ -515,10 +622,11 @@ class CliTests(unittest.TestCase):
                 **(env_extra or {}),
             }
             output, errors = io.StringIO(), io.StringIO()
-            api = api if api is not None else FakeGitHub()
-            evidence = decide(event, lookup or Mock(return_value=case["issues"]))
+            api = api if api is not None else fixture_api(case)
+            evidence = decide(event, lookup or Mock(return_value=pr_snapshot(case)))
             with patch.dict(live.os.environ, env, clear=True), redirect_stdout(output), redirect_stderr(errors):
-                with patch.object(live, "dry_run", return_value=evidence), patch.object(live, "GitHub", return_value=api):
+                with patch.object(live, "dry_run", return_value=evidence), patch.object(live, "GitHub", return_value=api), \
+                        patch.object(live, "read_pr_snapshot", return_value=pr_snapshot(case)):
                     code = live.main()
         self.assertEqual(len(output.getvalue().splitlines()), 1)
         self.assertNotIn(SENTINEL, output.getvalue())
@@ -576,7 +684,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual((code, result["outcome"]), (0, "updated"))
         self.assertEqual(result["run"], RUN)
         self.assertFalse(result["dry_run"])
-        for case in CASES[7:]:
+        for case in CASES[7:10]:
             code, result, api = self.invoke(case, {"PROJECT_TOKEN": ""})
             self.assertEqual((code, result["outcome"]), (0, "no-op"))
             self.assertEqual(api.calls, [])
@@ -586,6 +694,16 @@ class CliTests(unittest.TestCase):
         code, result, api = self.invoke(CASES[1], lookup=Mock(side_effect=LookupError(SENTINEL)))
         self.assertEqual((code, result["target"]["resolution"]), (1, "lookup_failed"))
         self.assertEqual(api.calls, [])
+
+    def test_stale_snapshot_is_successful_noop_but_recheck_failure_exits_one(self):
+        code, result, _ = self.invoke(CASES[-1])
+        self.assertEqual((code, result["outcome"], result["diagnostic"]), (0, "no-op", "stale_snapshot"))
+        self.assertEqual(result["writes"], [])
+        api = fixture_api(CASES[1])
+        api.read_pr = Mock(side_effect=LookupError(SENTINEL))
+        code, result, _ = self.invoke(CASES[1], api=api)
+        self.assertEqual((code, result["outcome"], result["diagnostic"]), (1, "error", "pr_recheck"))
+        self.assertEqual(result["writes"], [])
 
 
 if __name__ == "__main__":
