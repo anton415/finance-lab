@@ -1,0 +1,2 @@
+Disposable live rollout fixture for issue #94.
+Do not merge this pull request.
