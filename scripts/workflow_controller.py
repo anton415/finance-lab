@@ -19,6 +19,17 @@ def workflow_controller(event, draft, merged):
         return "Review"
     return None
 
+def desired_pr_status(state, draft, merged):
+    if state == "open" and merged:
+        return None
+    elif state == "open" and draft:
+        return "In progress"
+    elif state == "open" and not draft:
+        return "Review"
+    elif state == "closed" and merged:
+        return "Done"
+    return None
+
 
 ACTIONS = ("opened", "ready_for_review", "converted_to_draft", "reopened", "closed")
 CLOSING_ISSUES_QUERY = """
