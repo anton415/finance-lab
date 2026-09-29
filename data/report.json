@@ -340,7 +340,7 @@
     },
     {
       "pr_number": 102,
-      "cycle_time_hours": "unknown",
+      "cycle_time_hours": 0.10416666666666667,
       "commits": 1,
       "additions": 21,
       "deletions": 0,
