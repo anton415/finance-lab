@@ -25,7 +25,8 @@ def event_for(case):
         "action": case["action"],
         "number": 17,
         "pull_request": {
-            "number": 17, "draft": case["draft"], "merged": case["merged"],
+            "number": 17, "draft": case.get("event_draft", case["draft"]), "merged": case["merged"],
+            "body": "\n".join(f"Closes #{number}" for number in case.get("event_issues", [])),
             "base": {"repo": {"full_name": REPOSITORY}},
         },
     }
@@ -35,28 +36,60 @@ def issue(number, repository=REPOSITORY):
     return {"number": number, "repository": {"nameWithOwner": repository}}
 
 
-def response(nodes, has_next=False, cursor=None):
-    return {"data": {"repository": {"pullRequest": {"closingIssuesReferences": {
-        "nodes": nodes, "pageInfo": {"hasNextPage": has_next, "endCursor": cursor},
-    }}}}}
+def pr_snapshot(case=None):
+    case = case or CASES[0]
+    return {
+        "number": 17, "state": case["state"], "draft": case["draft"], "merged": case["merged"],
+        "head_sha": "a" * 40, "updated_at": "2026-01-01T00:00:00Z",
+        "closing_issues": [{"repository": REPOSITORY, "number": number} for number in case["issues"]],
+    }
+
+
+def response(nodes, has_next=False, cursor=None, case=None):
+    current = pr_snapshot(case)
+    return {"data": {"repository": {"pullRequest": {
+        "number": current["number"],
+        "state": "MERGED" if current["merged"] else current["state"].upper(),
+        "isDraft": current["draft"], "merged": current["merged"],
+        "headRefOid": current["head_sha"], "updatedAt": current["updated_at"],
+        "closingIssuesReferences": {
+            "nodes": nodes, "pageInfo": {"hasNextPage": has_next, "endCursor": cursor},
+        },
+    }}}}
 
 
 def gh_result(body):
     return subprocess.CompletedProcess([], 0, stdout=json.dumps(body), stderr="")
 
 
-def decide(event, lookup=controller.closing_issue_numbers, run=None):
+def decide(event, lookup=controller.read_pr_snapshot, run=None):
     return controller.dry_run("pull_request_target", event, REPOSITORY, run or RUN, lookup)
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_every_wakeup_uses_the_same_current_state_decision_core(self):
+        for case in CASES[:8]:
+            current = pr_snapshot(case)
+            for action in controller.ACTIONS:
+                with self.subTest(state=current["state"], draft=current["draft"], action=action):
+                    event = event_for(case)
+                    event["action"] = action
+                    # Historical state and even absent state fields are irrelevant.
+                    event["pull_request"].pop("draft")
+                    event["pull_request"].pop("merged")
+                    with patch.object(controller, "desired_pr_status", wraps=controller.desired_pr_status) as core:
+                        result = decide(event, Mock(return_value=current))
+                    core.assert_called_once_with(current["state"], current["draft"], current["merged"])
+                    self.assertEqual(result["intended_status"], case["expected"]["status"])
+                    self.assertEqual(result["snapshot"], current)
+
     def test_all_required_fixture_decisions_through_api_adapter(self):
-        self.assertEqual(len(CASES), 10)
+        self.assertEqual(len(CASES), 16)
         for case in CASES:
             with self.subTest(case=case["name"]):
                 event = event_for(case)
                 original = deepcopy(event)
-                body = response([issue(number) for number in case["issues"]])
+                body = response([issue(number) for number in case["issues"]], case=case)
                 with patch.object(controller.subprocess, "run", return_value=gh_result(body)):
                     result = decide(event)
                 expected = case["expected"]
@@ -66,7 +99,7 @@ class LifecycleTests(unittest.TestCase):
                     key: expected[key] for key in ("add", "remove", "clear_all")
                 })
                 self.assertEqual(result["target"], {
-                    "issue_number": 23 if expected["resolution"] == "resolved" else None,
+                    "issue_number": case["issues"][0] if expected["resolution"] == "resolved" else None,
                     "resolution": expected["resolution"],
                 })
                 self.assertEqual((result["event"], result["action"], result["pr_number"]),
@@ -79,7 +112,7 @@ class LifecycleTests(unittest.TestCase):
     def test_retries_have_identical_decisions_for_every_fixture(self):
         for case in CASES:
             with self.subTest(case=case["name"]):
-                lookup = Mock(return_value=case["issues"])
+                lookup = Mock(return_value=pr_snapshot(case))
                 first = decide(event_for(case), lookup)
                 self.assertEqual(first, decide(event_for(case), lookup))
                 retry = decide(event_for(case), lookup, {"id": "1000", "attempt": "2"})
@@ -95,7 +128,9 @@ class LifecycleTests(unittest.TestCase):
         )
         for numbers in ([23], []):
             with self.subTest(numbers=numbers):
-                lookup = Mock(return_value=numbers)
+                lookup = Mock(return_value={**pr_snapshot(), "closing_issues": [
+                    {"repository": REPOSITORY, "number": number} for number in numbers
+                ]})
                 result = decide(event, lookup)
                 lookup.assert_called_once_with(REPOSITORY, 17)
                 self.assertNotIn(SENTINEL, json.dumps(result))
@@ -105,7 +140,7 @@ class LifecycleTests(unittest.TestCase):
     def test_invalid_payloads_do_not_resolve_a_target(self):
         malformed = [None, [], {}, {"action": "opened"}]
         for key, value in (("number", True), ("number", -1), ("number", "17"),
-                           ("draft", "false"), ("merged", None), ("base", None),
+                           ("base", None),
                            ("base", {"repo": {"full_name": "another/repository"}})):
             event = event_for(CASES[0])
             event["pull_request"][key] = value
@@ -119,7 +154,7 @@ class LifecycleTests(unittest.TestCase):
                 lookup.assert_not_called()
 
     def test_unhandled_event_or_action_is_noop(self):
-        for event_name, action in (("push", "opened"), ("pull_request_target", "synchronize")):
+        for event_name, action in (("push", "opened"), ("pull_request_target", "labeled")):
             event = event_for(CASES[0])
             event["action"] = action
             lookup = Mock()
@@ -129,6 +164,45 @@ class LifecycleTests(unittest.TestCase):
 
 
 class RelationshipTests(unittest.TestCase):
+    def test_missing_or_malformed_snapshot_never_proposes_changes(self):
+        malformed = [None, {}]
+        for key, value in (
+            ("number", True), ("number", 18), ("state", "UNKNOWN"),
+            ("isDraft", "false"), ("merged", None), ("merged", True),
+            ("state", "MERGED"), ("headRefOid", SENTINEL), ("headRefOid", None),
+            ("updatedAt", SENTINEL), ("updatedAt", None), ("closingIssuesReferences", None),
+        ):
+            pr = response([issue(23)])["data"]["repository"]["pullRequest"]
+            pr[key] = value
+            malformed.append(pr)
+        for pr in malformed:
+            with self.subTest(pr=pr):
+                body = {"data": {"repository": {"pullRequest": pr}}}
+                with patch.object(controller.subprocess, "run", return_value=gh_result(body)):
+                    result = decide(event_for(CASES[0]))
+                self.assertEqual(result["target"]["resolution"], "lookup_failed")
+                self.assertIsNone(result["snapshot"])
+                self.assertEqual(result["decision"], "no-op")
+                self.assertNotIn(SENTINEL, json.dumps(result))
+
+    def test_revision_change_during_pagination_discards_partial_snapshot(self):
+        for key, value in (("isDraft", False), ("state", "CLOSED"),
+                           ("headRefOid", "b" * 40), ("updatedAt", "2026-01-01T00:00:01Z")):
+            pages = [response([issue(23)], True, "next"), response([issue(24)])]
+            pages[1]["data"]["repository"]["pullRequest"][key] = value
+            with patch.object(controller.subprocess, "run", side_effect=list(map(gh_result, pages))):
+                result = decide(event_for(CASES[0]))
+            self.assertEqual(result["target"]["resolution"], "lookup_failed")
+            self.assertIsNone(result["snapshot"])
+
+    def test_reference_order_duplicates_and_repository_case_do_not_change_fingerprint(self):
+        snapshots = []
+        for nodes in ([issue(24), issue(23)],
+                      [issue(23, REPOSITORY.upper()), issue(24), issue(23)]):
+            with patch.object(controller.subprocess, "run", return_value=gh_result(response(nodes))):
+                snapshots.append(controller.read_pr_snapshot(REPOSITORY, 17))
+        self.assertEqual(*snapshots)
+
     def test_cross_repository_issues_are_never_targets(self):
         for nodes, resolution, number in (
             ([issue(23, "other/repo")], "missing", None),
@@ -161,7 +235,10 @@ class RelationshipTests(unittest.TestCase):
         pages = [response([issue(23, "other/repo")], True, "next"),
                  response([issue(24, REPOSITORY.upper()), issue(24)])]
         with patch.object(controller.subprocess, "run", side_effect=list(map(gh_result, pages))):
-            self.assertEqual(controller.closing_issue_numbers(REPOSITORY, 17), [24])
+            self.assertEqual(controller.read_pr_snapshot(REPOSITORY, 17)["closing_issues"], [
+                {"repository": "example/finance-demo", "number": 24},
+                {"repository": "other/repo", "number": 23},
+            ])
 
     def test_api_failures_never_use_partial_results_or_log_errors(self):
         failures = [
