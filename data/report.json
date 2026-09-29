@@ -365,11 +365,11 @@
     {
       "pr_number": 104,
       "cycle_time_hours": "unknown",
-      "commits": 1,
-      "additions": 557,
+      "commits": 2,
+      "additions": 601,
       "deletions": 195,
       "changed_files": 9,
-      "ci_attempts": 1,
+      "ci_attempts": 2,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
