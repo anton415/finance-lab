@@ -2,7 +2,7 @@
 
 ## Synthetic checks
 
-Observed locally with Python 3.14.5: all 47 lifecycle tests passed, the standalone
+Observed locally with Python 3.14.5: all 49 lifecycle tests passed, the standalone
 controller assertions passed, and all 16 fixture replays matched the table below.
 Every repeat made zero writes. Workflow YAML parsing and assertions confirmed the
 seven wake-ups, read-only default permissions, issue-write-only live permissions,
@@ -61,7 +61,8 @@ Expected results with these synthetic starting states:
 Every repeated fixture must produce zero writes. Unit tests also check each
 fingerprint field independently, a changed relationship without a changed
 `updatedAt`, failed rechecks, inconsistent paginated snapshots, and both Done
-owners. Project-owned Done only clears workflow labels.
+owners. Timestamp-only changes allow writes and pagination to finish while the
+timestamp remains in evidence. Project-owned Done only clears workflow labels.
 
 ## Real controlled rollout — pending human merge
 

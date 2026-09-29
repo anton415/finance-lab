@@ -31,7 +31,9 @@ checks; production decisions call only the state-based core.
 One fixed GraphQL query reads PR number, state, draft and merged flags, head SHA,
 `updatedAt`, and GitHub's
 [`closingIssuesReferences`](https://docs.github.com/en/graphql/reference/pulls#pullrequest).
-It reads every relationship page and rejects a PR revision change between pages.
+It reads every relationship page and rejects a lifecycle state or head SHA change
+between pages. `updatedAt` remains evidence only; timestamp changes caused by
+conversation activity do not invalidate pagination or the pre-write fingerprint.
 References are deduplicated and sorted. Exactly one distinct issue whose
 repository matches the PR's base repository is required; foreign references
 remain in the fingerprint but cannot become targets. GraphQL `MERGED` normalizes

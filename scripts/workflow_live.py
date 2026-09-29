@@ -232,6 +232,13 @@ class GitHub:
             raise LookupError
 
 
+def pr_fingerprint(snapshot):
+    """Only lifecycle-relevant state authorizes writes; updated_at is evidence."""
+    return tuple(snapshot[key] for key in (
+        "number", "state", "draft", "merged", "head_sha", "closing_issues",
+    ))
+
+
 def apply_decision(evidence, repository, project, done_owner, api):
     """Diff current-state intent, then guard the first write with its fingerprint."""
     result = {**evidence, "dry_run": False, "outcome": "no-op", "writes": []}
@@ -265,7 +272,7 @@ def apply_decision(evidence, repository, project, done_owner, api):
         if remove or update_status or add_review:
             with read_stage("pr_recheck"):
                 current_pr = api.read_pr(repository, evidence["pr_number"])
-            if current_pr != evidence["snapshot"]:
+            if pr_fingerprint(current_pr) != pr_fingerprint(evidence["snapshot"]):
                 result.update(diagnostic="stale_snapshot",
                               reason="PR snapshot changed before mutation; no writes. Rerun to reconcile current state.")
                 return result

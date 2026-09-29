@@ -13,8 +13,10 @@ The original dry-run CLI stays read-only.
 The controller reads PR number, state, draft/merged flags, head SHA, `updatedAt`,
 and closing issue references together with one fixed GraphQL query. GraphQL's
 `MERGED` state is normalized to `closed` for the #97 core. If references need
-pagination, every page repeats the PR revision fields; a change discards the
-whole read. References are deduplicated and sorted for stable comparison.
+pagination, every page repeats the lifecycle fields; a state or head SHA change
+discards the whole read. `updatedAt` remains evidence only: conversation activity
+can change it without affecting the lifecycle decision. References are deduplicated
+and sorted for stable comparison.
 
 The adapter resolves exactly one current same-repository closing issue through
 that snapshot, then reads all issue labels and Project memberships. Only the
@@ -36,8 +38,9 @@ For an action, all reads and configuration checks finish before any mutation:
 
 1. Calculate desired workflow labels from the dry-run intent.
 2. When writes are needed, reread the PR snapshot immediately before the first
-   mutation. Compare number, state, draft/merged flags, head SHA, `updatedAt`, and
-   all closing references. Any difference returns `outcome: no-op`,
+   mutation. Compare number, state, draft/merged flags, head SHA, and all closing
+   references. A timestamp-only change does not block writes. A change to any
+   fingerprint field returns `outcome: no-op`,
    `diagnostic: stale_snapshot`, and `writes: []`. A failed recheck exits 1 with
    `diagnostic: pr_recheck` and no writes.
 3. Remove only obsolete workflow labels, with one REST request per label.

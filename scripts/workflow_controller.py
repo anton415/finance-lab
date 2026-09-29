@@ -55,8 +55,8 @@ def positive_integer(value):
 def read_pr_snapshot(repository, pr_number):
     """Read current PR state and all closing references together.
 
-    Each page repeats the PR revision fields; discard the entire read if they
-    change. The same fixed query also supplies the pre-write fingerprint.
+    Each page repeats the lifecycle fields; discard the entire read if they
+    change. updatedAt is evidence only: conversation activity can change it.
     """
     references = set()
     snapshot = None
@@ -92,7 +92,7 @@ def read_pr_snapshot(repository, pr_number):
             revision = {
                 "number": pr["number"], "state": "open" if pr["state"] == "OPEN" else "closed",
                 "draft": pr["isDraft"], "merged": pr["merged"],
-                "head_sha": pr["headRefOid"], "updated_at": pr["updatedAt"],
+                "head_sha": pr["headRefOid"],
             }
             if snapshot is not None and revision != snapshot:
                 raise ValueError
@@ -111,7 +111,7 @@ def read_pr_snapshot(repository, pr_number):
             if type(page["hasNextPage"]) is not bool:
                 raise ValueError
             if not page["hasNextPage"]:
-                return {**snapshot, "closing_issues": [
+                return {**snapshot, "updated_at": pr["updatedAt"], "closing_issues": [
                     {"repository": repo, "number": number} for repo, number in sorted(references)
                 ]}
             cursor = page["endCursor"]

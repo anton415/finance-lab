@@ -77,7 +77,7 @@ class ApplyTests(unittest.TestCase):
     def test_each_fingerprint_change_blocks_every_write(self):
         changes = [
             {"number": 18},
-            {"head_sha": "b" * 40}, {"updated_at": "2026-01-01T00:00:01Z"},
+            {"head_sha": "b" * 40},
             {"closing_issues": []},
             {"closing_issues": [{"repository": REPOSITORY, "number": 24}]},
             {"closing_issues": [{"repository": REPOSITORY, "number": 23},
@@ -97,6 +97,24 @@ class ApplyTests(unittest.TestCase):
                         self.assertEqual(result["writes"], [])
                         self.assertEqual(api.state, original)
                         self.assertEqual([call[0] for call in api.calls], ["read", "recheck"])
+
+    def test_timestamp_only_change_allows_writes_and_keeps_snapshot_evidence(self):
+        for case in (CASES[0], CASES[1], CASES[6]):
+            for owner in ("controller", "project"):
+                with self.subTest(case=case["name"], owner=owner):
+                    api = fixture_api(case)
+                    api.pr["updated_at"] = "2026-01-01T00:00:01Z"
+                    result = apply(case, api, owner)
+                    self.assertEqual(result["outcome"], "updated")
+                    self.assertNotIn("diagnostic", result)
+                    self.assertEqual(result["snapshot"]["updated_at"], "2026-01-01T00:00:00Z")
+                    expected_writes = ["remove_workflow_labels"]
+                    if case["expected"]["status"] != "Done" or owner == "controller":
+                        expected_writes.append("set_status")
+                    if case["expected"]["status"] == "Review":
+                        expected_writes.append("add_needs_review")
+                    self.assertEqual(result["writes"], expected_writes)
+                    self.assertEqual(apply(case, api, owner)["writes"], [])
 
     def test_recheck_failure_is_sanitized_and_prevents_every_write(self):
         api = fixture_api(CASES[1])
@@ -554,11 +572,11 @@ class ApiTests(unittest.TestCase):
 class SnapshotIntegrationTests(unittest.TestCase):
     def test_snapshot_read_and_recheck_use_repository_credentials_before_first_mutation(self):
         current = response([issue(23)], case=CASES[1])
-        for stale in (False, True):
-            with self.subTest(stale=stale):
+        for change, stale in (({}, False), ({"updatedAt": "2026-01-01T00:00:01Z"}, False),
+                              ({"isDraft": True}, True)):
+            with self.subTest(change=change):
                 rechecked = deepcopy(current)
-                if stale:
-                    rechecked["data"]["repository"]["pullRequest"]["isDraft"] = True
+                rechecked["data"]["repository"]["pullRequest"].update(change)
                 replies = [gh_result(current), gh_result({"data": issue_data()}),
                            gh_result({"data": project_data()}), gh_result(rechecked)]
                 if not stale:

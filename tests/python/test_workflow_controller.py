@@ -187,13 +187,26 @@ class RelationshipTests(unittest.TestCase):
 
     def test_revision_change_during_pagination_discards_partial_snapshot(self):
         for key, value in (("isDraft", False), ("state", "CLOSED"),
-                           ("headRefOid", "b" * 40), ("updatedAt", "2026-01-01T00:00:01Z")):
+                           ("headRefOid", "b" * 40)):
             pages = [response([issue(23)], True, "next"), response([issue(24)])]
             pages[1]["data"]["repository"]["pullRequest"][key] = value
             with patch.object(controller.subprocess, "run", side_effect=list(map(gh_result, pages))):
                 result = decide(event_for(CASES[0]))
             self.assertEqual(result["target"]["resolution"], "lookup_failed")
             self.assertIsNone(result["snapshot"])
+
+    def test_timestamp_only_change_during_pagination_preserves_complete_snapshot(self):
+        pages = [response([issue(23, "other/repo")], True, "next"), response([issue(24)])]
+        pages[1]["data"]["repository"]["pullRequest"]["updatedAt"] = "2026-01-01T00:00:01Z"
+        with patch.object(controller.subprocess, "run", side_effect=list(map(gh_result, pages))):
+            result = decide(event_for(CASES[0]))
+        self.assertEqual(result["decision"], "action")
+        self.assertEqual(result["target"], {"issue_number": 24, "resolution": "resolved"})
+        self.assertEqual(result["snapshot"]["updated_at"], "2026-01-01T00:00:01Z")
+        self.assertEqual(result["snapshot"]["closing_issues"], [
+            {"repository": REPOSITORY, "number": 24},
+            {"repository": "other/repo", "number": 23},
+        ])
 
     def test_reference_order_duplicates_and_repository_case_do_not_change_fingerprint(self):
         snapshots = []
