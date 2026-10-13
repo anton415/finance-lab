@@ -400,7 +400,7 @@
     },
     {
       "pr_number": 108,
-      "cycle_time_hours": "unknown",
+      "cycle_time_hours": 0.335,
       "commits": 1,
       "additions": 175,
       "deletions": 0,
