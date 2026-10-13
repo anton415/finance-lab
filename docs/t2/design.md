@@ -72,15 +72,17 @@ committed while its response was lost.
 - Scope keys to the authenticated user. Enforce database uniqueness on
   `(user_id, idempotency_key)`; user identity comes from authentication.
 - Bind the stored key to the original operation and its request contents.
-  Reusing it with changed contents is rejected without changing the budget.
+  While that record is retained, reject reuse with changed contents without
+  changing the budget. This protection is guaranteed for the 24-hour retention
+  window below.
 - A new key does not make an outdated budget version acceptable.
 
 ### Atomic execution and replay
 
-For a completed operation, verify ownership and request identity, then return the
-recorded successful result without applying another write or incrementing the
-version. This replay must be recognized before treating its old expected version
-as a new-save conflict.
+For a completed operation whose record is retained, verify ownership and request
+identity, then return the recorded successful result without applying another
+write or incrementing the version. This replay must be recognized before treating
+its old expected version as a new-save conflict.
 
 For a new operation, claim its key under the unique constraint and perform the
 normal ownership, validation and atomic version checks. Store the budget change,
@@ -103,8 +105,8 @@ Concurrent identical requests coordinate through the unique constraint:
 ### A replayed result is a receipt for an earlier operation
 
 Suppose K saves version 7 as version 8, but its response is lost. Another browser
-then saves version 9. A retry of K returns K's original success with version 8
-and leaves the current version 9 unchanged.
+then saves version 9. While K's record is retained, a retry of K returns K's
+original success with version 8 and leaves the current version 9 unchanged.
 
 The UI can confirm that K succeeded, then fetch the current budget while
 preserving any new unsaved edits. It must not present the replayed version 8 as
@@ -114,7 +116,7 @@ proof that it is still the latest state.
 
 | Situation | Decision |
 | --- | --- |
-| Successful operation | Guarantee replay for **24 hours after the successful server commit**. |
+| Successful operation | Retain the key, request binding and successful result for **24 hours after the successful server commit**, guaranteeing replay and rejection of changed-content reuse during that window. |
 | Retention expiry | The result record becomes eligible for deletion. The budget itself remains stored. |
 | Concurrent duplicate | Wait up to **5 seconds** for the original operation's result. This limit is provisional until save latency is measured. |
 | No result within the wait limit | Return a retryable “result not available yet” outcome. This does not prove that the original save failed; it may still complete. |
@@ -126,7 +128,12 @@ not establish the original operation's outcome.
 
 After deletion, absence of a key record cannot prove that an earlier save
 failed, nor can absence alone distinguish an expired key from a never-seen key.
-The API contract must account for that limitation.
+An absent key is treated as a new operation, subject to the normal ownership,
+validation and atomic version checks. Replay and changed-content rejection are
+no longer guaranteed, including when the old key is reused for a different
+month. Clients must follow the expired-recovery flow above; this design does not
+retain a separate permanent key binding. The API contract must account for this
+limited recovery window.
 
 ## Technology choice
 
@@ -148,12 +155,13 @@ These are acceptance cases, not completed test results.
 | Two different saves based on version 7 | Exactly one succeeds as version 8; the other reports a conflict without mutation. |
 | Conflict review | Preserve the draft; chosen edits apply to the latest budget and other fields remain intact. |
 | Another save during review | Reject the now-outdated resolved save and preserve the draft again. |
-| Successful save, lost response, identical retry | Return the recorded success; no second write or version increment. |
-| Same key, changed contents | Reject reuse without mutation. |
+| Successful save, lost response, identical retry while the record is retained | Return the recorded success; no second write or version increment. |
+| Same retained key, changed contents (including a different month) | Reject reuse without mutation. |
 | Concurrent identical requests | One committed operation; matching duplicates replay its result when available. |
 | Failure before commit | Both budget change and result record roll back; a retry may proceed through normal checks. |
-| K succeeded as version 8; current budget is version 9 | Replay version 8's result and leave version 9 untouched. |
-| Result retention | Do not delete a successful result before its 24-hour guarantee ends; expired recovery requires review before a new save. |
+| K's record is retained with success at version 8; current budget is version 9 | Replay version 8's result and leave version 9 untouched. |
+| Result retention | Retain the key, request binding and successful result for at least the 24-hour guarantee; expired recovery requires review before a new save. |
+| Key reused after its record has been deleted | Treat it as a new operation with normal checks, even if its contents or month differ; do not promise replay or detection of earlier reuse. |
 | Duplicate reaches the five-second wait limit | Return a retryable unknown outcome; a later retry keeps the same key and contents. |
 
 ## Next: API contract
