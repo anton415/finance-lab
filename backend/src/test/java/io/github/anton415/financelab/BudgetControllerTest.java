@@ -80,4 +80,22 @@ class BudgetControllerTest {
 
 		verify(budgetService).findByMonth(month);
 	}
+
+	@Test
+	void getBudgetReturnsNotFoundWhenMissing() throws Exception {
+		YearMonth month = YearMonth.of(2026, 12);
+		when(budgetService.findByMonth(month)).thenReturn(Optional.empty());
+
+		mockMvc.perform(get("/api/budgets/2026-12"))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().json("""
+						{
+						  "code": "BUDGET_NOT_FOUND",
+						  "month": "2026-12"
+						}
+						""", JsonCompareMode.STRICT));
+
+		verify(budgetService).findByMonth(month);
+	}
 }
