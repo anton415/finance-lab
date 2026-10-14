@@ -182,6 +182,22 @@ class BudgetControllerTest {
 	}
 
 	@Test
+	void putBudgetReturnsBadRequestWhenIdempotencyKeyIsMissing() throws Exception {
+		mockMvc.perform(put("/api/budgets/2026-12")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(SAVE_REQUEST_JSON))
+				.andExpect(status().isBadRequest())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().json("""
+						{
+						  "code": "INVALID_REQUEST"
+						}
+						""", JsonCompareMode.STRICT));
+
+		verifyNoInteractions(budgetService);
+	}
+
+	@Test
 	void putBudgetReturnsNotImplementedForReadableRequest() throws Exception {
 		mockMvc.perform(put("/api/budgets/2026-12")
 				.header("Idempotency-Key", "save-test-key")
