@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -100,9 +102,10 @@ class BudgetControllerTest {
 		verify(budgetService).findByMonth(month);
 	}
 
-	@Test
-	void getBudgetReturnsBadRequestForInvalidMonth() throws Exception {
-		mockMvc.perform(get("/api/budgets/2026-13"))
+	@ParameterizedTest
+	@ValueSource(strings = {"2026-13", "2026-00", "2026-1"})
+	void getBudgetReturnsBadRequestForInvalidMonth(String month) throws Exception {
+		mockMvc.perform(get("/api/budgets/" + month))
 				.andExpect(status().isBadRequest())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(content().json("""
