@@ -1,6 +1,7 @@
 package io.github.anton415.financelab;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -97,5 +98,19 @@ class BudgetControllerTest {
 						""", JsonCompareMode.STRICT));
 
 		verify(budgetService).findByMonth(month);
+	}
+
+	@Test
+	void getBudgetReturnsBadRequestForInvalidMonth() throws Exception {
+		mockMvc.perform(get("/api/budgets/2026-13"))
+				.andExpect(status().isBadRequest())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().json("""
+						{
+						  "code": "INVALID_REQUEST"
+						}
+						""", JsonCompareMode.STRICT));
+
+		verifyNoInteractions(budgetService);
 	}
 }
