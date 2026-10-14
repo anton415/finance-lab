@@ -50,6 +50,10 @@ public class BudgetController {
 			@PathVariable("month") String month,
 			@RequestBody SaveBudgetRequest request,
 			@RequestHeader("Idempotency-Key") String idempotencyKey) {
+		if (idempotencyKey.isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("code", "INVALID_REQUEST"));
+		}
+
 		// Binding-only checkpoint; authenticated, user-scoped saving is not implemented yet.
 		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
 	}
