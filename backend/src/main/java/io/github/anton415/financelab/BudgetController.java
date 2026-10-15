@@ -25,14 +25,8 @@ public class BudgetController {
 
 	@GetMapping("/api/budgets/{month}")
 	public ResponseEntity<Object> getBudget(@PathVariable("month") String month) {
-		if (!month.matches("[0-9]{4}-[0-9]{2}") || month.startsWith("0000-")) {
-			return ResponseEntity.badRequest().body(Map.of("code", "INVALID_REQUEST"));
-		}
-
-		YearMonth selectedMonth;
-		try {
-			selectedMonth = YearMonth.parse(month);
-		} catch (DateTimeParseException exception) {
+		YearMonth selectedMonth = parseMonth(month);
+		if (selectedMonth == null) {
 			return ResponseEntity.badRequest().body(Map.of("code", "INVALID_REQUEST"));
 		}
 
@@ -50,11 +44,22 @@ public class BudgetController {
 			@PathVariable("month") String month,
 			@RequestBody SaveBudgetRequest request,
 			@RequestHeader("Idempotency-Key") String idempotencyKey) {
-		if (idempotencyKey.isBlank()) {
+		if (parseMonth(month) == null || idempotencyKey.isBlank()) {
 			return ResponseEntity.badRequest().body(Map.of("code", "INVALID_REQUEST"));
 		}
 
-		// Binding-only checkpoint; authenticated, user-scoped saving is not implemented yet.
+		// Validation-only checkpoint; authenticated, user-scoped saving is not implemented yet.
 		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	private static YearMonth parseMonth(String month) {
+		if (!month.matches("[0-9]{4}-[0-9]{2}") || month.startsWith("0000-")) {
+			return null;
+		}
+		try {
+			return YearMonth.parse(month);
+		} catch (DateTimeParseException exception) {
+			return null;
+		}
 	}
 }

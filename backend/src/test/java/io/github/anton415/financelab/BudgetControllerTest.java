@@ -8,12 +8,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -21,6 +28,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @WebMvcTest(BudgetController.class)
 class BudgetControllerTest {
@@ -129,7 +140,7 @@ class BudgetControllerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"2026-13", "2026-00", "2026-1"})
+	@MethodSource("invalidMonths")
 	void getBudgetReturnsBadRequestForInvalidMonth(String month) throws Exception {
 		mockMvc.perform(get("/api/budgets/" + month))
 				.andExpect(status().isBadRequest())
@@ -198,7 +209,7 @@ class BudgetControllerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"", "   "})
+	@ValueSource(strings = {"", "   ", "\t", "\u2003"})
 	void putBudgetReturnsBadRequestForBlankIdempotencyKey(String key) throws Exception {
 		mockMvc.perform(put("/api/budgets/2026-12")
 				.header("Idempotency-Key", key)
@@ -215,13 +226,165 @@ class BudgetControllerTest {
 		verifyNoInteractions(budgetService);
 	}
 
-	@Test
-	void putBudgetReturnsNotImplementedForReadableRequest() throws Exception {
+	@ParameterizedTest
+	@ValueSource(strings = {"null", "7", "0", "-1", "7.0", "7e0", "9223372036854775807", "-9223372036854775808",
+			"9223372036854775807.0", "-9223372036854775808.0"})
+	void putBudgetReturnsNotImplementedForValidVersion(String version) throws Exception {
 		mockMvc.perform(put("/api/budgets/2026-12")
+				.header("Idempotency-Key", "save-test-key")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(SAVE_REQUEST_JSON.replace("\"expectedVersion\": null", "\"expectedVersion\": " + version)))
+				.andExpect(status().isNotImplemented());
+
+		verifyNoInteractions(budgetService);
+	}
+
+	@ParameterizedTest
+	@MethodSource("invalidMonths")
+	void putBudgetReturnsBadRequestForInvalidMonth(String month) throws Exception {
+		assertInvalidRequest(put("/api/budgets/{month}", month)
+				.header("Idempotency-Key", "save-test-key")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(SAVE_REQUEST_JSON));
+	}
+
+	static Stream<String> invalidMonths() {
+		return Stream.of("2026-13", "2026-00", "2026-1", "0000-01", "10000-01", "026-01",
+				"２０２６-01", "2026-٠١", " 2026-01", "2026-01 ", "2026-01\n", "2026-01x");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"0001-01", "9999-12"})
+	void getBudgetAcceptsBoundaryMonths(String month) throws Exception {
+		YearMonth selectedMonth = YearMonth.parse(month);
+		when(budgetService.findByMonth(selectedMonth)).thenReturn(Optional.empty());
+
+		mockMvc.perform(get("/api/budgets/{month}", month))
+				.andExpect(status().isNotFound());
+
+		verify(budgetService).findByMonth(selectedMonth);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"0001-01", "9999-12"})
+	void putBudgetAcceptsBoundaryMonths(String month) throws Exception {
+		mockMvc.perform(put("/api/budgets/{month}", month)
 				.header("Idempotency-Key", "save-test-key")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(SAVE_REQUEST_JSON))
 				.andExpect(status().isNotImplemented());
+
+		verifyNoInteractions(budgetService);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"K", " key with spaces ", "arbitrary:key/1"})
+	void putBudgetAcceptsNonblankIdempotencyKeysWithoutNewFormatRules(String key) throws Exception {
+		mockMvc.perform(put("/api/budgets/2026-12")
+				.header("Idempotency-Key", key)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(SAVE_REQUEST_JSON))
+				.andExpect(status().isNotImplemented());
+
+		verifyNoInteractions(budgetService);
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("invalidBodies")
+	void putBudgetRejectsInvalidBodiesBeforeCallingService(String description, String json) throws Exception {
+		assertInvalidRequest(put("/api/budgets/2026-12")
+				.header("Idempotency-Key", "save-test-key")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json));
+	}
+
+	static Stream<Arguments> invalidBodies() {
+		JsonMapper mapper = JsonMapper.builder().build();
+		ObjectNode valid = (ObjectNode) mapper.readTree(SAVE_REQUEST_JSON);
+		List<Arguments> cases = new ArrayList<>();
+		for (String root : List.of("", "null", "[]", "[{}]", "7", "true", "\"budget\"", "{}",
+				"{\"expectedVersion\":", SAVE_REQUEST_JSON + " {}")) {
+			cases.add(Arguments.of("invalid root: " + root, root));
+		}
+		for (String field : List.of("expectedVersion", "income", "spending", "investments")) {
+			ObjectNode body = valid.deepCopy();
+			body.remove(field);
+			cases.add(Arguments.of("missing " + field, body.toString()));
+		}
+		for (String field : List.of("month", "userId", "formatVersion", "unknown")) {
+			ObjectNode body = valid.deepCopy();
+			body.put(field, "unexpected");
+			cases.add(Arguments.of("extra " + field, body.toString()));
+		}
+		for (String version : List.of("\"7\"", "\"\"", "true", "false", "[]", "{}", "7.5", "-0.1",
+				"7.000000000000000001", "1e-9999", "9223372036854775808", "-9223372036854775809",
+				"9223372036854775807.1", "-9223372036854775808.1", "1e100")) {
+			cases.add(Arguments.of("invalid expectedVersion: " + version,
+					SAVE_REQUEST_JSON.replace("\"expectedVersion\": null", "\"expectedVersion\": " + version)));
+		}
+		for (String value : List.of("null", "[]", "\"\"", "\"spending\"", "0", "true", "false")) {
+			ObjectNode body = valid.deepCopy();
+			body.set("spending", mapper.readTree(value));
+			cases.add(Arguments.of("invalid spending type: " + value, body.toString()));
+		}
+		List<String> categories = new ArrayList<>();
+		valid.get("spending").properties().forEach(entry -> categories.add(entry.getKey()));
+		for (String category : categories) {
+			ObjectNode body = valid.deepCopy();
+			((ObjectNode) body.get("spending")).remove(category);
+			cases.add(Arguments.of("missing category: " + category, body.toString()));
+		}
+		for (boolean replaceCategory : List.of(false, true)) {
+			ObjectNode body = valid.deepCopy();
+			ObjectNode spending = (ObjectNode) body.get("spending");
+			if (replaceCategory) {
+				spending.remove("travel");
+			}
+			spending.put("unknown", "");
+			cases.add(Arguments.of("unknown category, replacing existing: " + replaceCategory, body.toString()));
+		}
+		List<String> amountFields = new ArrayList<>(List.of("income", "investments"));
+		amountFields.addAll(categories);
+		List<String> invalidAmounts = new ArrayList<>(List.of("null", "0", "1.5", "true", "false", "[]", "{}"));
+		for (String amount : List.of("-1", "-0", "+1", "1.", "1,25", "1 000", " ", "\t", " 1", "1 ", "1\n",
+				"١", "１", "NaN", "Infinity", "1e309", "1e", ".", "0x10")) {
+			invalidAmounts.add(mapper.writeValueAsString(amount));
+		}
+		for (String field : amountFields) {
+			for (String amount : invalidAmounts) {
+				ObjectNode body = valid.deepCopy();
+				ObjectNode target = categories.contains(field) ? (ObjectNode) body.get("spending") : body;
+				target.set(field, mapper.readTree(amount));
+				cases.add(Arguments.of("invalid " + field + ": " + amount, body.toString()));
+			}
+		}
+		return cases.stream();
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"empty", "mixed", "representation"})
+	void putBudgetAcceptsExistingValidAmountFixtures(String fixture) throws Exception {
+		JsonMapper mapper = JsonMapper.builder().build();
+		ObjectNode body = (ObjectNode) mapper.readTree(Files.readString(
+				Path.of("..", "fixtures", "budget-backup", "v2", "valid", fixture + ".json")));
+		body.remove("formatVersion");
+		body.remove("month");
+		body.putNull("expectedVersion");
+
+		mockMvc.perform(put("/api/budgets/2026-12")
+				.header("Idempotency-Key", "save-test-key")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body.toString()))
+				.andExpect(status().isNotImplemented());
+
+		verifyNoInteractions(budgetService);
+	}
+
+	private void assertInvalidRequest(MockHttpServletRequestBuilder request) throws Exception {
+		mockMvc.perform(request)
+				.andExpect(status().isBadRequest())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().string("{\"code\":\"INVALID_REQUEST\"}"));
 
 		verifyNoInteractions(budgetService);
 	}
