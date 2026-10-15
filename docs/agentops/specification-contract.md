@@ -112,8 +112,9 @@ Do not demand out-of-scope robustness or future capabilities.
 Return **PASS** (all rows checked, no blockers/material questions),
 **CHANGES_REQUESTED** (concrete blocking defects), or **BLOCKED** (insufficient
 context or a required decision). Report explicitly when there are no findings.
-Every verdict names the exact spec digest and design revision reviewed. A PASS is
-only a quality verdict; it never supplies human authorization.
+Every verdict names the exact spec digest, source-contract revision set and design
+revision reviewed. A PASS is only a quality verdict; it never supplies human
+authorization.
 
 ## Immutable revisions and revision ownership
 
@@ -148,19 +149,22 @@ checks and decision surface. Include the full digest in copyable text.
 The proposed phone action is an authenticated maintainer decision on the linked
 GitHub issue/PR, naming `accept`, `reject` or `request changes`, target, spec
 artifact path + digest, the complete source-contract revision set (each repository,
-file path and full commit SHA), and design revision (or N/A). An immutable review-record
-link may supply this tuple only if it binds all of those fields and the reviewed
-verdict. A mutable issue or `main` link inside the spec does not bind its source
-contracts; changing a source-contract revision requires renewed review/acceptance
-even when the spec digest is unchanged.
+file path and full commit SHA), design revision (or N/A), reviewer identity and
+verdict, and an immutable reference identifying that specific review. Alternatively,
+one immutable review-record link may supply the entire tuple, including reviewer
+identity and verdict. A mutable issue or `main` link inside the spec does not bind
+its source contracts. Changing a source-contract revision or superseding the
+referenced review requires renewed acceptance even when the spec digest is
+unchanged; a source change also requires renewed quality review.
 This is a record format, **not a functioning command**.
 GitHub Mobile or Safari must support the entire action; record actual device
 results in #131 before enabling it. No local file editing or terminal is required
 of the human. A missing phone path keeps the gate disabled.
 
 The eventual trusted gate must validate the authenticated sender/authorization,
-target, exact current spec/source-contract/design revisions against the accepted
-tuple, lifecycle eligibility and single-use decision;
+target, exact current spec/source-contract/design revisions and the identified
+reviewer/verdict against the accepted tuple, lifecycle eligibility and single-use
+decision. Missing or superseded review evidence cannot authorize promotion;
 duplicates are no-ops, stale/unauthorized/malformed decisions make no writes.
 Agent-authored messages, reactions, copied usernames and `LGTM` are not consent.
 Sender identity alone cannot distinguish a human from an agent using that same

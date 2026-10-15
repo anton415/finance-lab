@@ -35,39 +35,46 @@ Reviewer: Codex in this implementation session, reviewing the pre-existing issue
 body above, not treating the worked adaptation below as independently authored.
 Reviewed spec digest:
 `f40ce70dc7976ca8a07c56b2586ed4db6a8dea1139fc65bc66a6c5463d52946f`.
-Design context: pinned existing T2 design above; no new design is required for
-this local validation slice.
+Design context: pinned existing T2 design above. The reviewer's assessment is that
+this local validation slice needs no new design; the captured author draft does
+not supply the required design-checkpoint answer.
 
-**Current quality verdict: PASS** for the captured source digest above. The
-content review found no blocking behavior defects or material product questions.
-The initial review was BLOCKED on author provenance (Q1); the maintainer's
-confirmation resolved Q1 without changing the source bytes. R1–R6 were rechecked
-against that same input. This PASS supplies no human baseline acceptance.
+**Current quality verdict: CHANGES_REQUESTED** for the captured source digest
+above: required author-supplied fields are missing (B1). No additional blocking
+behavior defects were found. The initial review was BLOCKED on provenance (Q1).
+After the maintainer resolved Q1, the reviewer incorrectly recorded PASS;
+[Codex PR review](https://github.com/anton415/finance-lab/pull/133#discussion_r4280115704)
+identified the completeness failure. This verdict supersedes that PASS without
+changing the captured source bytes. Reviewer context cannot fill missing answers
+in an unchanged author draft or supply human baseline acceptance.
 
 | Check | Observed result |
 | --- | --- |
-| R1 | Outcome, boundary, test location, exact error/no-service assertions and human demonstration are present. The capture supplies immutable source context. |
+| R1 | Outcome, boundary, test location, exact error/no-service assertions and human demonstration are present, but the required Questions / risks answer is absent. This fails completeness even if no product defect is found. |
 | R2 | Explicit null and omission differ; valid requests remain 501. No contradictory acceptance criteria found. |
 | R3 | Invalid months, fields/types, categories/amounts, malformed JSON and missing/blank keys are covered with 400 and no service call. |
 | R4 | Amount strings and fifteen IDs follow the existing contract; GET is retained. Persistence/authentication and future successful saves are explicitly excluded. |
 | R5 | No new key format, normalization, storage or infrastructure is requested. |
-| R6 | Exact source digest and repository revision recorded; ChatGPT authorship confirmed by the maintainer. Human acceptance remains a separate pending gate. |
+| R6 | The review records exact source context and confirmed ChatGPT authorship, but the author draft lacks the required design-checkpoint answer and revision/decision record. Reviewer-supplied metadata is evidence, not an author-owned revision. |
 
 | ID / class | Reference | Finding / resolution owner |
 | --- | --- | --- |
+| B1 / blocking | Contract v1 Short issue template, R1 and R6; captured #123 body | Questions / risks has no explicit answer or justified N/A; the author supplies neither a design-checkpoint conclusion nor a revision/decision record. The author must produce a complete revised planning copy, including the observed problem/evidence and pinned contracts, then have its new digest independently reviewed. Do not borrow answers from the reviewer or adaptation to PASS the original digest. |
 | Q1 / question, resolved | Contract v1 Roles and R6; #127 independent-review acceptance | The posting account did not establish ChatGPT authorship. The maintainer confirmed it in this implementation chat; the source digest is unchanged. |
 | O1 / optional | #123 acceptance criterion 5; existing request/controller tests | A 501 status alone cannot observe preserved strings. Reuse the DTO assertions alongside MVC tests in the test plan; do not add a save call or response payload just to observe them. Author may adopt this clarification. |
 
-No issue text, labels, Project state or product behavior was changed. Further
-edits require a fresh verdict against their digest; do not inherit this PASS or
-treat an editor's proposal as approval.
+No issue text, labels, Project state or product behavior was changed. B1 remains
+open until an author-owned revision is independently reviewed. Do not reuse the
+superseded PASS or treat an editor's proposal as approval.
 
 ## Worked template adaptation (Codex proposal, not accepted)
 
 This synthetic planning copy demonstrates the fields without rewriting #123.
 It was prepared by Codex after the source review and has **no independent PASS**.
 It proposes no new product decisions. The original captured issue remains the
-source of scope; a human must accept any future replacement explicitly.
+source of scope; a human must accept any future replacement explicitly. These
+proposed answers do not resolve B1 in the captured source. Author adoption creates
+a new revision requiring independent review.
 
 **Problem / evidence:** the pinned PUT controller is a binding checkpoint, while
 #123 requires complete validation before service use. The API and backup contracts
@@ -154,10 +161,14 @@ no blocking defects; its independent review/human decisions remain pending.
 | N2 Invented requirement: append “Reject every Idempotency-Key that is not a UUID.” | `blocking`, R5/R2: conflicts with item 4 and source #123's prohibition on a new key format. | CHANGES_REQUESTED; unauthorized requirement rejected. |
 | N3 Conflicting contract: replace item 3's amount-string rule with “Parse and round every amount to two decimals before validation.” | `blocking`, R4/R2: backup contract Amount strings explicitly prohibits rounding/normalization; behavior would lose `0010.00`, `.5` and exponent spellings. | CHANGES_REQUESTED; contract conflict rejected. |
 
-The correction for N1 is acceptance item 1 above. The human demonstration must
-explain that “correctly” did not identify inputs or expected results, then identify
-the **accepted artifact's full commit/path and digest**. No human demonstration
-or acceptance is claimed here.
+The correction for N1 is acceptance item 1 above. In the implementation chat on
+15 October 2026, the maintainer stated that `2026-13` must return HTTP 400, exactly
+`{"code":"INVALID_REQUEST"}`, and no `BudgetService` call, and confirmed that edits
+are not covered by prior approval. The earlier contract acceptance identifies its
+commit and digest in the
+[maintainer's comment](https://github.com/anton415/finance-lab/pull/133#issuecomment-6185867564).
+That learning demonstration is complete; the comment does not accept this revised
+contract or the incomplete example spec, or establish device/controller behavior.
 
 ## Phone handoff and remaining acceptance
 
@@ -165,7 +176,8 @@ or acceptance is claimed here.
   quality review and human authority inspectable without changing T2 work.
 - **Tests:** the three manual negative cases above were rejected; source/relative
   links and digests are checked separately in the PR verification record.
-- **Decisions needed:** accept/reject the contract baseline and any
+- **Decisions needed:** the author resolves B1 in a new planning copy; Codex reviews
+  that revision. The human then accepts/rejects the current contract baseline and
   proposed spec/design revision from the actual maintainer account on iPhone.
 - **Risks:** no specification approval controller exists. An agent posting through
   the owner's account is not distinguishable by sender alone. Promotion stays
@@ -176,8 +188,8 @@ or acceptance is claimed here.
   [#131 device/gate work](https://github.com/anton415/finance-lab/issues/131).
   The draft PR supplies immutable artifact links, diff and check links.
 
-Still required before #127 can close: human acceptance of product decisions and
-baseline, the human explanation above,
+Still required before #127 can close: an author-owned complete spec revision and
+its independent review, human acceptance of product decisions and current baseline,
 and actual iPhone acceptance/rejection plus stale-revision refusal evidence.
 #131 must establish and test the phone-capable trusted path; this document does
 not implement it, claim device results or require a desktop to make a decision.
