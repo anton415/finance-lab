@@ -3,7 +3,8 @@
 Status: contract agreed through guided exercises on 13 October 2026.
 The HTTP status codes, error names and conservative client retry deadline below
 record the proposed wire mapping accepted for this documentation step.
-Implementation and runtime verification are pending.
+PUT request validation is implemented at the HTTP 501 checkpoint described below.
+Authenticated saving and runtime verification of its outcomes remain pending.
 
 This contract covers reading and saving monthly budgets. It builds on the
 [conflict and retry design](design.md). Authentication endpoints and database
@@ -48,6 +49,26 @@ Send JSON with `Content-Type: application/json` and a required
 The body contains exactly `expectedVersion`, `income`, `spending` and
 `investments`. The month stays in the URL; user identity stays in the session.
 All body fields are required. An omitted `expectedVersion` is invalid.
+
+Request validation accepts `expectedVersion` only as explicit JSON `null` or a
+JSON number with an integral value in Java `Long` range
+(`-9223372036854775808` through `9223372036854775807`). Integral spellings such as
+`7`, `7.0` and `7e0` are equivalent. Strings, booleans, fractions and out-of-range
+numbers are invalid; validation must not round them into valid versions. Explicit
+`null` expresses an expectation of absence; omission supplies no expectation.
+Accepting a version's shape does not choose an initial version or bypass the
+later atomic comparison below.
+
+PUT uses the same month rules as GET: complete ASCII `YYYY-MM`, year 0001–9999
+and month 01–12. Invalid months, malformed JSON, missing or unknown body fields,
+wrong JSON types, invalid categories or amount strings, and a missing or
+`String.isBlank()` idempotency key return exactly `{"code":"INVALID_REQUEST"}`
+with HTTP 400 before any `BudgetService` call. No additional idempotency-key
+format or normalization is imposed.
+
+The current validation checkpoint returns HTTP 501 for valid creation and update
+requests without invoking `BudgetService`. Authenticated transactional saving and
+the successful responses below remain separate work.
 
 | Version expectation | Condition for acceptance |
 | --- | --- |

@@ -2,10 +2,11 @@ package io.github.anton415.financelab;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
+@JsonDeserialize(using = SaveBudgetRequestDeserializer.class)
 public record SaveBudgetRequest(
-		@JsonProperty(value = "expectedVersion", required = true) Long expectedVersion,
+		Long expectedVersion,
 		String income,
 		Map<String, String> spending,
 		String investments) {
