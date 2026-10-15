@@ -28,11 +28,12 @@ The agreed T2 API contract defines the request structure. The existing budget ba
 
 Supporting evidence:
 
-* Captured #123 specification
-* BudgetController at baseline
-* BudgetExceptionHandler at baseline
-* Existing controller tests
-* Existing request-binding tests
+* [Captured #123 specification](https://github.com/anton415/finance-lab/blob/d487af299c5b4d48095681add24e5cfa91921df9/docs/agentops/examples/issue-123-source.md)
+* [BudgetController at baseline](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/backend/src/main/java/io/github/anton415/financelab/BudgetController.java)
+* [BudgetExceptionHandler at baseline](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/backend/src/main/java/io/github/anton415/financelab/BudgetExceptionHandler.java)
+* [SaveBudgetRequest at baseline](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/backend/src/main/java/io/github/anton415/financelab/SaveBudgetRequest.java)
+* [Existing controller tests](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/backend/src/test/java/io/github/anton415/financelab/BudgetControllerTest.java)
+* [Existing request-binding tests](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/backend/src/test/java/io/github/anton415/financelab/SaveBudgetRequestTest.java)
 
 These are inspected source facts. They are not evidence that the expanded validation tests have run or passed.
 
@@ -152,15 +153,15 @@ Immutable source references
 
 Pilot and review sources, pinned at repository commit d487af299c5b4d48095681add24e5cfa91921df9:
 
-* Specification contract v1
-* Captured original #123 specification
-* Codex review findings and proposed adaptation
+* [Specification contract v1](https://github.com/anton415/finance-lab/blob/d487af299c5b4d48095681add24e5cfa91921df9/docs/agentops/specification-contract.md)
+* [Captured original #123 specification](https://github.com/anton415/finance-lab/blob/d487af299c5b4d48095681add24e5cfa91921df9/docs/agentops/examples/issue-123-source.md)
+* [Codex review findings and proposed adaptation](https://github.com/anton415/finance-lab/blob/d487af299c5b4d48095681add24e5cfa91921df9/docs/agentops/specification-review-example.md)
 
 Product contracts, pinned at repository baseline 450ead382535597574a73c0005415f59ab5b644f:
 
-* T2 monthly budget API contract
-* Budget backup contract v2
-* T2 existing system design
+* [T2 monthly budget API contract](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/docs/t2/api-contract.md)
+* [Budget backup contract v2](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/docs/budget-backup-contract.md)
+* [T2 existing system design](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/docs/t2/design.md)
 
 Dependency status
 
@@ -312,7 +313,7 @@ Justification:
 
 The change is confined to validation at an existing HTTP request boundary. It does not change persistent storage, data ownership, authentication, authorization, service boundaries, integrations, concurrency/retry execution, or cloud/release architecture.
 
-The existing T2 design and API contract already provide the required context.
+The existing [T2 design](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/docs/t2/design.md) and [API contract](https://github.com/anton415/finance-lab/blob/450ead382535597574a73c0005415f59ab5b644f/docs/t2/api-contract.md) already provide the required context.
 
 Validation behavior and tests are sufficient for this issue. A separate design note would add documentation without introducing a substantive design decision.
 
