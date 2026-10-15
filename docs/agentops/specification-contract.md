@@ -146,14 +146,21 @@ decisions needed; risks; direct links** to the pinned spec/design, critique, dif
 checks and decision surface. Include the full digest in copyable text.
 
 The proposed phone action is an authenticated maintainer decision on the linked
-GitHub issue/PR, naming `accept`, `reject` or `request changes`, target, spec digest
-and design revision (or N/A). This is a record format, **not a functioning command**.
+GitHub issue/PR, naming `accept`, `reject` or `request changes`, target, spec
+artifact path + digest, the complete source-contract revision set (each repository,
+file path and full commit SHA), and design revision (or N/A). An immutable review-record
+link may supply this tuple only if it binds all of those fields and the reviewed
+verdict. A mutable issue or `main` link inside the spec does not bind its source
+contracts; changing a source-contract revision requires renewed review/acceptance
+even when the spec digest is unchanged.
+This is a record format, **not a functioning command**.
 GitHub Mobile or Safari must support the entire action; record actual device
 results in #131 before enabling it. No local file editing or terminal is required
 of the human. A missing phone path keeps the gate disabled.
 
 The eventual trusted gate must validate the authenticated sender/authorization,
-target, exact current revisions, lifecycle eligibility and single-use decision;
+target, exact current spec/source-contract/design revisions against the accepted
+tuple, lifecycle eligibility and single-use decision;
 duplicates are no-ops, stale/unauthorized/malformed decisions make no writes.
 Agent-authored messages, reactions, copied usernames and `LGTM` are not consent.
 Sender identity alone cannot distinguish a human from an agent using that same
