@@ -63,7 +63,7 @@ The solid path is the **private browser read-composition and write-forwarding pa
 
 - Adds another service to build, deploy, monitor and secure, but centralizes UI-specific aggregation without moving financial domain logic into Traefik or Budget Service.
 - Allows parallel requests, bounded response times and isolated per-service failures, preserving domain independence.
-- Maintain explicit, preferably versioned API contracts; shared TypeScript types do not remove the need to validate Go API payloads at the boundary. **Under ADR-022, monetary values are validated decimal strings with currencies and must not pass through JS `number` for authoritative computations**; the owning Go service performs financial arithmetic.
+- Maintain **contract-first OpenAPI 3.1 REST APIs, independently versioned by each service and the BFF** (ADR-024). Generate TypeScript client types where helpful, but validate response payloads at runtime; use safe RFC 9457 Problem Details for standardized errors. **Under ADR-022, monetary values are validated decimal strings with currencies and must not pass through JS `number` for authoritative computations**; the owning Go service performs financial arithmetic.
 - Add integration tests for user isolation, missing/invalid security context, partial outages, unexpected response data, deadline propagation and disconnected clients.
 - Does not select GraphQL, a mobile BFF, server-side rendering, an HTTP framework or the exact browser cookie/refresh/logout implementation. **ADR-023 selects a dedicated Managed PostgreSQL session database**, while ADR-013 establishes the BFF-managed browser session model.
 
@@ -78,3 +78,4 @@ The solid path is the **private browser read-composition and write-forwarding pa
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-022: Exact Money DTO](0022-exact-decimal-money-currency-contract.md)
 - [ADR-023: PostgreSQL BFF sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
+- [ADR-024: API versioning and standard errors](0024-openapi-contract-first-rest-versioning.md)

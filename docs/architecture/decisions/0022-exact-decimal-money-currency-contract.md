@@ -81,7 +81,7 @@ The diagram describes a **target contract and ownership model**, not deployed AP
 
 ## Required validation and deferred specifications
 
-- Cross-language Go, TypeScript and PostgreSQL contract tests: non-floating-point decimal round-trips, currency validation, overflow/underflow limits, operation-specific signs and scale, rounding boundaries, cross-currency rejection, and explicit FX conversion inputs.
+- Cross-language Go, TypeScript and PostgreSQL contract tests: non-floating-point decimal round-trips, currency validation, overflow/underflow limits, operation-specific signs and scale, rounding boundaries, cross-currency rejection, and explicit FX conversion inputs. **ADR-024 requires this decimal-string-plus-currency Money shape in each new service-owned OpenAPI contract**, without changing historical V2 backup semantics.
 - Include values such as `0.1` and `0.2`, currencies with nonstandard minor-unit policies, long decimals, negative amounts when allowed, and investment quantities. Test money in idempotent saves, concurrency conflicts, database reads and versioned events.
 - Treat V2 fixture compatibility, original-string preservation and T2 concurrency/idempotency as **migration acceptance criteria**, not optional cleanup. The existing V2 validator's binary64 rules are not replaced here.
 - Choose exact Go decimal library/type, concrete `NUMERIC` constraints, currency registry, FX-rate API, per-operation rounding policy, exact wire schema grammar, and versioned migration plan during implementation. Do not assume these details are already accepted.
@@ -100,6 +100,7 @@ The diagram describes a **target contract and ownership model**, not deployed AP
 - [ADR-009: Portfolio event contracts](0009-hybrid-rest-kafka-portfolio-events.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-020: Staging correctness tests](0020-local-staging-automated-reliability-tests.md)
+- [ADR-024: Money DTO in OpenAPI](0024-openapi-contract-first-rest-versioning.md)
 - [Existing V2 budget backup contract](../../budget-backup-contract.md)
 - [Existing T2 persistence design](../../t2/design.md)
 - [PostgreSQL exact numeric types](https://www.postgresql.org/docs/current/datatype-numeric.html)

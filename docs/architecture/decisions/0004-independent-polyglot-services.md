@@ -23,7 +23,7 @@ Finance Lab must allow users to use budgeting, investments and FIRE tracking ind
 | Primary persistence | SQL with PostgreSQL (see ADR-003) |
 | Public API Gateway | Traefik (see ADR-002) |
 
-Budget, Portfolio and FIRE are **peer services** with independent business responsibilities, API contracts, deployment lifecycles and data ownership. **ADR-022 specifies exact decimal Money plus currency for new versioned APIs**, with financial arithmetic remaining in the owning Go service rather than the BFF. A user can use Portfolio or FIRE without creating a budget, and can use Budget without Portfolio or FIRE. Any cross-service information exchange must be explicit; the platform does not act as a universal business orchestrator.
+Budget, Portfolio and FIRE are **peer services** with independent business responsibilities, API contracts, deployment lifecycles and data ownership. **ADR-024 selects service-owned OpenAPI 3.1 contracts and independent v1-major REST versioning** for new APIs. **ADR-022 specifies exact decimal Money plus currency for new versioned APIs**, with financial arithmetic remaining in the owning Go service rather than the BFF. A user can use Portfolio or FIRE without creating a budget, and can use Budget without Portfolio or FIRE. Any cross-service information exchange must be explicit; the platform does not act as a universal business orchestrator.
 
 The frontend is a client, not the owner of domain state. Release 1 uses an independently deployed React/TypeScript static SPA, with Yandex Object Storage + Cloud CDN as its hosting target and reusable APIs for possible desktop/mobile clients (ADR-010). **The containerized application services and Traefik target Kubernetes in Release 1 (ADR-016)**; the diagram below remains a logical service diagram, not a cluster layout. Frontend availability depends on static hosting, DNS and network health; it is not guaranteed.
 
@@ -90,3 +90,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-016: Release 1 Kubernetes orchestration](0016-kubernetes-release1-deployment.md)
 - [ADR-021: GitHub Organization and GitOps](0021-github-organization-actions-argocd-gitops.md)
 - [ADR-022: Exact decimal Money contracts](0022-exact-decimal-money-currency-contract.md)
+- [ADR-024: Contract-first REST APIs](0024-openapi-contract-first-rest-versioning.md)
