@@ -21,7 +21,7 @@ The main alternatives were static Single-Page Application (SPA) hosting with a C
 - Use **shared, versioned API contracts** usable by the web client and potential future desktop/mobile applications; do not create mandatory backend coupling to the SPA runtime.
 - Treat desktop and mobile clients as **future supported client types**, not required applications for Release 1.
 - Keep user authentication centralized in Keycloak (ADR-006). Browser authentication, sessions/tokens, logout and refresh policies require a separate decision. Configure cross-origin browser access narrowly if frontend and API reside on separate origins.
-- A public, sanitized dashboard may be hosted alongside the SPA, but what telemetry can be exposed anonymously is **not decided here**. Raw Grafana, Loki, Prometheus, Jaeger and any private financial APIs must not become publicly accessible by implication.
+- A public engineering dashboard will use allowlisted, sanitized, periodically published static JSON, as decided in ADR-011. Raw Grafana, Loki, Prometheus, Jaeger and private financial APIs remain inaccessible to anonymous visitors.
 
 ## Architecture diagram
 
@@ -86,7 +86,7 @@ Solid arrows represent the Release 1 logical asset and API paths; dashed paths r
 - Eliminates the requirement to run a web application server merely to serve the existing React SPA.
 - Supports independent deployment and failure isolation between static assets and financial APIs, with explicit availability limits.
 - Introduces CDN/origin configuration, CORS, client/API compatibility and client-side degraded-state handling.
-- Does **not** select SSR, a BFF, native mobile/desktop frameworks, offline persistence, public dashboard permissions or an exact production DNS/cookie architecture. Reevaluate those against concrete needs.
+- Does **not** select SSR, a BFF, native mobile/desktop frameworks, offline persistence or an exact production DNS/cookie architecture. Public metrics exposure is governed by ADR-011; detailed operational access remains implementation work.
 
 ## Related decisions
 
@@ -94,3 +94,4 @@ Solid arrows represent the Release 1 logical asset and API paths; dashed paths r
 - [ADR-004: Independent services and language distribution](0004-independent-polyglot-services.md)
 - [ADR-006: Keycloak identity](0006-keycloak-identity-service-authorization.md)
 - [ADR-007: Python Analytics and Rust library](0007-python-analytics-rust-library.md)
+- [ADR-011: Public sanitized observability dashboard](0011-public-sanitized-observability-dashboard.md)

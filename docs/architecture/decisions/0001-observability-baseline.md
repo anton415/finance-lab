@@ -25,7 +25,7 @@ The platform operates shared observability infrastructure. Every application ser
 
 Instrument end-to-end user operations rather than relying only on per-service uptime. Propagate W3C `traceparent` across HTTP boundaries; use request and business correlation identifiers as needed. If asynchronous messaging is adopted later, propagate event identifiers and correlation/causation metadata through that transport as appropriate. This ADR **does not decide** whether to use Kafka or another event system.
 
-Treat observability as sensitive: do not emit personal financial values, secrets, credentials, tokens or unnecessary identifiers into logs or metric labels. Prefer bounded-cardinality labels. A possible public portfolio dashboard may show **sanitized, aggregate operational metrics only**; public access and sanitization policies remain separate decisions.
+Treat observability as sensitive: do not emit personal financial values, secrets, credentials, tokens or unnecessary identifiers into logs or metric labels. Prefer bounded-cardinality labels. A public engineering dashboard is accepted in ADR-011: it receives only sanitized, allowlisted, periodically exported metrics as static JSON. Raw observability backends remain private, with special safeguards against identifying users from low-volume traffic.
 
 ## Architecture diagram
 
@@ -58,9 +58,10 @@ The arrows describe **logical telemetry flows**, not a selected transport or col
 - Reuses ShareTrip's practical lessons on logs, metrics, tracing and distributed-process observability.
 - Creates infrastructure costs and operational work; set retention, sampling and alert thresholds separately.
 - Avoid making application correctness depend on telemetry availability.
-- Collector/shipper choices, dashboard publication, external access controls and deployment topology remain undecided.
+- Collector/shipper choices, exporter implementation, private operator-dashboard access controls and deployment topology remain undecided. Public static-export boundaries are recorded in ADR-011.
 
 ## References
 
 - [ShareTrip observability lesson](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/14-process-observability.md)
 - [ShareTrip implementation](https://github.com/anton415/share_trip)
+- [ADR-011: Public sanitized observability dashboard](0011-public-sanitized-observability-dashboard.md)
