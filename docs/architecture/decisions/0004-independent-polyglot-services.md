@@ -24,6 +24,37 @@ Budget, Portfolio and FIRE are **peer services** with independent business respo
 
 The frontend is a client, not the owner of domain state. The deployment topology of web/mobile/desktop clients and their availability guarantees require a separate decision. An independently deployed, always-available frontend is a stated product goal, not a verified behavior under this ADR.
 
+## Architecture diagram
+
+```mermaid
+flowchart TD
+    WEB["Finance Lab web client<br/>TypeScript"]
+    G["Finance Lab Platform<br/>Traefik ingress"]
+
+    subgraph DOMAIN["Independent financial capabilities — Go"]
+        B["Budget Service"]
+        P["Portfolio Service"]
+        F["FIRE Service"]
+    end
+    subgraph AI["Independent AI capability — Python"]
+        A["AI Agent Service"]
+    end
+
+    WEB --> G
+    G --> B
+    G --> P
+    G --> F
+    G --> A
+
+    classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
+    classDef platform fill:#E7EFFF,stroke:#466FD1,color:#162B58;
+    classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
+    class WEB client;
+    class G platform;
+    class B,P,F,A service;
+```
+
+This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. Optional service interactions, frontend availability, identity and asynchronous messaging are undecided.
 ## Migration and deferred choices
 
 - The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
