@@ -25,7 +25,7 @@ Finance Lab must allow users to use budgeting, investments and FIRE tracking ind
 
 Budget, Portfolio and FIRE are **peer services** with independent business responsibilities, API contracts, deployment lifecycles and data ownership. A user can use Portfolio or FIRE without creating a budget, and can use Budget without Portfolio or FIRE. Any cross-service information exchange must be explicit; the platform does not act as a universal business orchestrator.
 
-The frontend is a client, not the owner of domain state. Release 1 uses an independently deployed React/TypeScript static SPA, with Yandex Object Storage + Cloud CDN as its hosting target and reusable APIs for possible desktop/mobile clients (ADR-010). Frontend availability depends on static hosting, DNS and network health; it is not guaranteed.
+The frontend is a client, not the owner of domain state. Release 1 uses an independently deployed React/TypeScript static SPA, with Yandex Object Storage + Cloud CDN as its hosting target and reusable APIs for possible desktop/mobile clients (ADR-010). **The containerized application services and Traefik target Kubernetes in Release 1 (ADR-016)**; the diagram below remains a logical service diagram, not a cluster layout. Frontend availability depends on static hosting, DNS and network health; it is not guaranteed.
 
 ## Architecture diagram
 
@@ -87,3 +87,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-010: Independent static SPA and API-first clients](0010-independent-spa-and-api-first-clients.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: Browser authentication and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)
+- [ADR-016: Release 1 Kubernetes orchestration](0016-kubernetes-release1-deployment.md)

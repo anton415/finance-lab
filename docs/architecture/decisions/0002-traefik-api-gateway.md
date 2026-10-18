@@ -10,7 +10,7 @@ Budget, Portfolio, FIRE and AI capabilities must not be routed through or contro
 
 ## Decision
 
-Use **Traefik** as the initial API Gateway / reverse proxy. It is part of the platform rather than a financial domain service. Configure routing to independently deployable service APIs and relevant edge capabilities (for example TLS termination, when deployed). Do not implement the first gateway from scratch in Java or Go.
+Use **Traefik** as the initial API Gateway / reverse proxy. It is part of the platform rather than a financial domain service. Configure routing to independently deployable service APIs and relevant edge capabilities (for example TLS termination, when deployed). Do not implement the first gateway from scratch in Java or Go. **For Release 1, deploy Traefik as the Kubernetes cluster's API ingress/gateway component** (ADR-016); the choice of Kubernetes Ingress versus Gateway API provider and external load-balancer/DNS settings remains implementation work.
 
 Financial services retain their own business logic, state and resource-level authorization. Traefik is **not** the authority that decides whether a user owns an individual budget, portfolio or FIRE resource. Keycloak identity is accepted in ADR-006, and a separate TypeScript Web BFF for browser-specific API composition is accepted in ADR-012. BFF-managed browser sessions and server-side OAuth tokens are accepted in ADR-013; detailed cookie/session configuration, token delegation and gateway authentication policy remain implementation decisions.
 
@@ -64,3 +64,4 @@ Solid arrows represent the web-specific logical ingress path; they do not author
 - [Traefik documentation](https://doc.traefik.io/traefik/)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: Browser authentication and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)
+- [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)

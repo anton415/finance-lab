@@ -51,7 +51,7 @@ The solid arrows show **service-owned database access**. The dashed FIRE path is
 ## Consequences and boundaries
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
-- One initial database instance is operationally economical, but does **not** provide physical failure isolation between services.
+- One initial database instance is operationally economical, but does **not** provide physical failure isolation between services. Release 1 Kubernetes orchestration (ADR-016) **does not determine whether PostgreSQL is managed outside the cluster or hosted inside it**; choose durable storage, backup and restoration separately.
 - Data durability, recovery, user isolation, money representations and backup validation remain required regardless of architecture.
 - The Go financial domain services retain PostgreSQL as their authoritative store. **ADR-015** separately accepts Redis as an optional Python Analytics simulation cache and MongoDB as a store of derived saved analysis reports; neither replaces Go-owned financial records. Cache-invalidation implementation remains separate.
 - Existing budget T2 persistence, exact-string amount semantics, versioning, ownership and idempotency contracts must be preserved or explicitly superseded through a later decision when the Java proof-of-concept is migrated.
@@ -61,3 +61,4 @@ The solid arrows show **service-owned database access**. The dashed FIRE path is
 - [Current Finance Lab budget persistence and consistency design](../../t2/design.md)
 - [Database per Service pattern](https://microservices.io/patterns/data/database-per-service.html)
 - [ADR-015: Analytics-owned Redis and MongoDB](0015-analytics-redis-cache-mongodb-reports.md)
+- [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)
