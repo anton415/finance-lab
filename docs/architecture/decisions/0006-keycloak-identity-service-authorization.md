@@ -35,9 +35,10 @@ flowchart TD
     A["AI Agent · Python<br/>Restricted service permissions"]
 
     CLIENT -.->|"OIDC browser redirects"| IDP
-    CLIENT -->|"Private web API requests"| G
+    CLIENT -->|"Private web API + session cookie"| G
     G --> BFF
-    BFF -.->|"OIDC/session integration TBD"| IDP
+    BFF <-->|"OIDC token exchange"| IDP
+    BFF -->|"Store sessions + tokens"| STORE[("Server-side session store<br/>Technology TBD")]
     BFF --> B
     BFF --> P
     BFF --> F
@@ -54,13 +55,13 @@ flowchart TD
     class BFF,B,P,F,A finance;
 ```
 
-Dashed arrows indicate **optional or still-to-be-designed interactions**, including OIDC redirects and identity verification metadata (e.g., cached signing keys). The BFF does not replace per-service resource authorization. This is a logical flow; it does not finalize token storage, cookie/session settings or internal network routing.
+Dashed arrows indicate browser OIDC redirects, optional calls or identity verification metadata (e.g., cached signing keys), not required per-request Keycloak calls. The BFF holds OAuth tokens server-side (ADR-013), while the session-store implementation, cookie details and internal trust remain to be specified. The BFF does not replace per-service resource authorization.
 
 ## Security baseline and open implementation details
 
 For browser/native public clients, prefer standards-based **Authorization Code + PKCE** rather than password grant, implicit flow, or transmitting refresh tokens through arbitrary API headers. Where services accept bearer JWTs, verify signature, issuer, audience, expiration and other required claims using maintained libraries and trusted keys; authorization checks remain per-resource and per-operation. Do not expose Keycloak administrative endpoints to the public dashboard.
 
-The web client now uses a separate TypeScript Web BFF (ADR-012) for browser-specific access. Server-side token management and secure HttpOnly session cookies are a preferred approach for evaluation, **not** a finalized session specification. Gateway auth middleware, cookie/CSRF design, refresh/logout behavior, MFA, fine-grained policies, service-to-service authentication and delegation remain implementation decisions.
+The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth tokens and Secure/HttpOnly browser session cookies** (ADR-013). Authorization Code + PKCE, CSRF protection, session lifecycle and restricted CORS are accepted security requirements. Exact gateway middleware, cookie/CSRF implementation, session storage, refresh/logout behavior, MFA, service-to-service authentication and delegation remain implementation details.
 
 ## Consequences
 
@@ -76,3 +77,4 @@ The web client now uses a separate TypeScript Web BFF (ADR-012) for browser-spec
 - [ADR-002: Traefik Gateway](0002-traefik-api-gateway.md)
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
+- [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)

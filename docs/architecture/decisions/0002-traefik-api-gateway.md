@@ -12,7 +12,7 @@ Budget, Portfolio, FIRE and AI capabilities must not be routed through or contro
 
 Use **Traefik** as the initial API Gateway / reverse proxy. It is part of the platform rather than a financial domain service. Configure routing to independently deployable service APIs and relevant edge capabilities (for example TLS termination, when deployed). Do not implement the first gateway from scratch in Java or Go.
 
-Financial services retain their own business logic, state and resource-level authorization. Traefik is **not** the authority that decides whether a user owns an individual budget, portfolio or FIRE resource. Keycloak identity is accepted in ADR-006, and a separate TypeScript Web BFF for browser-specific API composition is accepted in ADR-012. Exact token/session mechanics and gateway authentication policy remain implementation decisions.
+Financial services retain their own business logic, state and resource-level authorization. Traefik is **not** the authority that decides whether a user owns an individual budget, portfolio or FIRE resource. Keycloak identity is accepted in ADR-006, and a separate TypeScript Web BFF for browser-specific API composition is accepted in ADR-012. BFF-managed browser sessions and server-side OAuth tokens are accepted in ADR-013; detailed cookie/session configuration, token delegation and gateway authentication policy remain implementation decisions.
 
 Service-to-service calls are not required to route through the public gateway. The accepted TypeScript Web BFF (ADR-012) composes browser-specific responses without taking over domain logic. Static frontend hosting is decided in ADR-010; native client implementations remain future work.
 
@@ -33,7 +33,7 @@ flowchart TD
         AN["Analytics · Python + Rust"]
     end
 
-    WEB -->|"HTTPS"| G
+    WEB -->|"HTTPS + session cookie"| G
     G -->|"Web routes"| BFF
     BFF -->|"Authorized API calls"| B
     BFF -->|"Authorized API calls"| P
@@ -51,7 +51,7 @@ flowchart TD
     class BFF,B,P,F,A,AN service;
 ```
 
-Solid arrows represent the web-specific logical ingress path; they do not authorize unrestricted public exposure. Dashed arrows are optional, explicitly secured routes. Keycloak identity is addressed in ADR-006; exact session behavior and downstream service identity are still open.
+Solid arrows represent the web-specific logical ingress path; they do not authorize unrestricted public exposure. Dashed arrows are optional, explicitly secured routes. Keycloak identity is addressed in ADR-006 and BFF-managed browser sessions in ADR-013; session-store implementation and downstream credentials remain open.
 ## Consequences and boundaries
 
 - Lower custom gateway implementation and maintenance burden for the initial release.
@@ -63,3 +63,4 @@ Solid arrows represent the web-specific logical ingress path; they do not author
 
 - [Traefik documentation](https://doc.traefik.io/traefik/)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
+- [ADR-013: Browser authentication and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)

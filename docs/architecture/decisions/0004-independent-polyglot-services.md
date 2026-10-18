@@ -48,14 +48,14 @@ flowchart TD
     end
     IDP["Keycloak<br/>Platform identity"]
 
-    WEB --> G
+    WEB -->|"Private web session cookie"| G
     G --> BFF
     BFF --> B
     BFF --> P
     BFF --> F
     BFF -.-> A
     BFF -.-> ANALYTICS
-    BFF -.->|"OIDC integration TBD"| IDP
+    BFF <-->|"OIDC code/token exchange"| IDP
 
     classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
     classDef platform fill:#E7EFFF,stroke:#466FD1,color:#162B58;
@@ -74,7 +74,7 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
 - Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
-- Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. Browser session design, delegated service identity, event contracts, any future native-client BFFs and detailed deployment configuration remain separate design work. The Web BFF is accepted in ADR-012, and independent static SPA hosting in ADR-010.
+- Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. BFF-managed browser sessions are accepted in ADR-013. Session-store technology, delegated service identity, event contracts, any future native-client BFFs and detailed deployment configuration remain separate design work. The Web BFF is accepted in ADR-012, and independent static SPA hosting in ADR-010.
 
 ## Related decisions
 
@@ -86,3 +86,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-009: Hybrid REST + Kafka starting with Portfolio](0009-hybrid-rest-kafka-portfolio-events.md)
 - [ADR-010: Independent static SPA and API-first clients](0010-independent-spa-and-api-first-clients.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
+- [ADR-013: Browser authentication and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)

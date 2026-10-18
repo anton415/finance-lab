@@ -20,7 +20,7 @@ The main alternatives were static Single-Page Application (SPA) hosting with a C
 - Implement the web client as an **API consumer** with explicit loading, failed-request and service-degradation states. When the API is unavailable, the HTML/JS/CSS should still load if the static hosting infrastructure is reachable. The UI must **not** represent missing balances or unavailable service responses as zero.
 - Use **shared, versioned API contracts** usable by the web client and potential future desktop/mobile applications; do not create mandatory backend coupling to the SPA runtime.
 - Treat desktop and mobile clients as **future supported client types**, not required applications for Release 1.
-- Keep user authentication centralized in Keycloak (ADR-006). A separately deployed TypeScript/Node.js Web BFF handles browser-specific aggregation and is the intended integration point for web sessions (ADR-012). Exact session/token, logout, refresh and CSRF policies still require implementation decisions. Configure cross-origin browser access narrowly if frontend and API reside on separate origins.
+- Keep user authentication centralized in Keycloak (ADR-006). A separately deployed TypeScript/Node.js Web BFF handles browser-specific aggregation and is the intended integration point for web sessions (ADR-012). BFF-managed server-side tokens, Secure/HttpOnly session cookies, Authorization Code + PKCE and CSRF protection are accepted in ADR-013. Exact session-store, logout/refresh and cookie/origin settings remain implementation work. Configure cross-origin browser access narrowly if frontend and API reside on separate origins.
 - A public engineering dashboard will use allowlisted, sanitized, periodically published static JSON, as decided in ADR-011. Raw Grafana, Loki, Prometheus, Jaeger and private financial APIs remain inaccessible to anonymous visitors.
 
 ## Architecture diagram
@@ -50,13 +50,13 @@ flowchart TD
     ORIGIN -->|"Origin assets"| CDN
     CDN -->|"Load SPA assets"| BROWSER
 
-    BROWSER -->|"Private web API requests"| GATEWAY
+    BROWSER -->|"Private web API<br/>Session cookie + CSRF for writes"| GATEWAY
     BROWSER -.->|"OIDC redirect when needed"| IDP
     FUTURE -.->|"Shared API contracts"| GATEWAY
     FUTURE -.->|"Native OIDC flows"| IDP
 
     GATEWAY -->|"Web routes"| BFF
-    BFF -.->|"Identity/session integration TBD"| IDP
+    BFF <-->|"OIDC code and token exchange"| IDP
     BFF --> BUDGET
     BFF --> PORTFOLIO
     BFF --> FIRE
@@ -82,7 +82,7 @@ Solid arrows show static asset delivery and the Release 1 private Web BFF path; 
 - **Frontend hosting unavailable:** The BFF and independent domain APIs can continue to operate **if gateway, identity provider, backend, network and their dependencies remain available**. A user cannot load a new SPA when its static delivery fails.
 - **Identity provider unavailable:** Public static assets may load, but sign-in and some authenticated requests can be unavailable.
 - **Same cloud provider:** Separate deployments reduce direct application coupling but **do not guarantee independent regional/provider availability**.
-- **Deployment details:** Use versioned immutable assets and a safe SPA HTML fallback, limit CORS to approved client origins, ensure correct TLS policies, and avoid shipping secrets or sensitive financial data in static assets. Browser token storage and cross-origin cookie behavior must be resolved with ADR-006 before deployment.
+- **Deployment details:** Use versioned immutable assets and a safe SPA HTML fallback, limit CORS to approved client origins, ensure correct TLS policies, and avoid shipping secrets or sensitive financial data in static assets. OAuth tokens remain server-side as accepted in ADR-013; exact cross-origin cookie/CORS/CSRF behavior must be verified against the chosen domains before deployment.
 - **Compatibility:** Define backwards-compatible or explicitly versioned API changes so clients deployed on different release schedules can coexist.
 
 ## Consequences and deferred decisions
@@ -100,3 +100,4 @@ Solid arrows show static asset delivery and the Release 1 private Web BFF path; 
 - [ADR-007: Python Analytics and Rust library](0007-python-analytics-rust-library.md)
 - [ADR-011: Public sanitized observability dashboard](0011-public-sanitized-observability-dashboard.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
+- [ADR-013: Browser login and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)
