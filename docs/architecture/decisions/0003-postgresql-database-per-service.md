@@ -54,7 +54,7 @@ The solid arrows show **separately credentialed database access**. Keycloak owns
 ## Consequences and boundaries
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
-- One managed physical PostgreSQL cluster reduces self-managed database work but shares a failure domain among Go domain data and Keycloak identity. **ADR-018 fixes its placement outside K3s**; select host count/HA, backup retention and tested restoration separately, and measure actual managed-service cost.
+- One managed physical PostgreSQL cluster reduces self-managed database work but shares a failure domain among Go domain data and Keycloak identity. **ADR-018 fixes its placement outside K3s**; **ADR-019 sets automated managed backups, PITR, tested restoration and initial RPO/RTO targets**. Host count/HA tier, exact backup retention and measured cost remain implementation work.
 - Data durability, recovery, user isolation, money representations and backup validation remain required regardless of architecture.
 - The Go financial domain services retain PostgreSQL as their authoritative store. **ADR-015** separately accepts Redis as an optional Python Analytics simulation cache and MongoDB as a store of derived saved analysis reports; neither replaces Go-owned financial records. Cache-invalidation implementation remains separate.
 - Existing budget T2 persistence, exact-string amount semantics, versioning, ownership and idempotency contracts must be preserved or explicitly superseded through a later decision when the Java proof-of-concept is migrated.
@@ -66,3 +66,4 @@ The solid arrows show **separately credentialed database access**. Keycloak owns
 - [ADR-015: Analytics-owned Redis and MongoDB](0015-analytics-redis-cache-mongodb-reports.md)
 - [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)
 - [ADR-018: Managed PostgreSQL placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
+- [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)

@@ -61,7 +61,7 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 ## Required implementation verification
 
 - **Cache:** Compare hits/misses against the Rust reference output; test TTL expiry, Redis outage, cache poisoning/cross-user isolation, changes in assumptions/source version/model version, and reproducible simulation seeds.
-- **Reports:** Test explicit save, fetch, owner-only access, document schema versioning, indexing, unauthorized reads, data retention/deletion, **K3s persistent-volume backup/restore**, and MongoDB outage without false success.
+- **Reports:** Test explicit save, fetch, owner-only access, document schema versioning, indexing, unauthorized reads, data retention/deletion, **daily off-cluster encrypted backups and recovery of MongoDB reports** (ADR-019), and MongoDB outage without false success.
 - **Integration:** Verify that Kafka delivery delay or duplicates cannot silently resurrect stale results and that core domain APIs continue to operate if either Redis or MongoDB is unavailable.
 - **Operations:** Instrument cache hit/miss/latency/error, report-save latency/errors, and expiry/staleness counts without exposing financial inputs or user identifiers in metric labels.
 
@@ -82,3 +82,4 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 - [ADR-011: Public observability dashboard](0011-public-sanitized-observability-dashboard.md)
 - [ADR-014: Keycloak service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-018: K3s-hosted Redis/MongoDB](0018-hybrid-managed-postgresql-k3s-platform-state.md)
+- [ADR-019: MongoDB backup and recovery](0019-backup-recovery-objectives-drills.md)
