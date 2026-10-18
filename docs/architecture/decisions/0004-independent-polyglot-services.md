@@ -71,7 +71,7 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 
 ## Migration and deferred choices
 
-- The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
+- The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately. **ADR-021 selects a future GitHub Organization and separate deployable-service repositories**, but the present repo and draft architecture PR will not be moved without a migration plan.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
 - Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
 - Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. BFF-managed browser sessions are accepted in ADR-013. Session-store technology, delegated service identity, event contracts, any future native-client BFFs and detailed deployment configuration remain separate design work. The Web BFF is accepted in ADR-012, and independent static SPA hosting in ADR-010.
@@ -88,3 +88,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: Browser authentication and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-016: Release 1 Kubernetes orchestration](0016-kubernetes-release1-deployment.md)
+- [ADR-021: GitHub Organization and GitOps](0021-github-organization-actions-argocd-gitops.md)

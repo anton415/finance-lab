@@ -40,7 +40,7 @@ The AI coordinator can propose scenarios, choose from approved test plans, summa
 
 ### Release acceptance and future work
 
-- Before Release 1, execute at least one repeatable workflow for each of Playwright user simulation, bounded k6 load, and allowlisted security/authorization tests **on isolated staging** and retain measurements and findings.
+- Before Release 1, execute at least one repeatable workflow for each of Playwright user simulation, bounded k6 load, and allowlisted security/authorization tests **on isolated staging** and retain measurements and findings. Under ADR-021, promote reviewed, versioned images via GitHub Actions and Argo CD and **require explicit human approval before production**. Expensive tests and active scans must stay within approved staging scopes.
 - Record the tested environment honestly if local workstation provisioning is still pending. Exact local hardware, K3s node sizing, fixture generation and test scheduling are implementation decisions.
 - Broader **chaos engineering** experiments, automated root-cause investigations and potential **local/cloud active-passive failover** are future evolutions and must be explicitly scoped, authorized and tested before exposing private data.
 - ADR-019 still governs backups and disaster recovery. A local test cluster alone does not protect against a full Yandex outage; no automatic backup replication or production traffic cutover is implied.
@@ -104,6 +104,7 @@ flowchart TD
 - [ADR-017: K3s-first strategy](0017-k3s-first-managed-kubernetes-comparison.md)
 - [ADR-018: Production stateful placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backups and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-021: GitHub Actions and Argo CD pipeline](0021-github-organization-actions-argocd-gitops.md)
 
 ## Technical references
 

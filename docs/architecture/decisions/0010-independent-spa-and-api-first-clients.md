@@ -15,7 +15,7 @@ The main alternatives were static Single-Page Application (SPA) hosting with a C
 **Release 1 (2026):**
 
 - Deploy the existing **React + TypeScript application as a static SPA**, separately from the API and business service runtime. Containerized APIs and Traefik will run on Kubernetes in Release 1 (ADR-016); the SPA remains **outside** that cluster.
-- Target **Yandex Object Storage + Cloud CDN** for the public website's versioned static assets. Cloud deployment settings, domain names and network topology are implementation work, not verified by this decision.
+- Target **Yandex Object Storage + Cloud CDN** for the public website's versioned static assets. ADR-021 selects a **separate GitHub Actions release path** for static frontend assets, independent of Argo CD's Kubernetes deployments. Cloud deployment settings, domain names and network topology are implementation work, not verified by this decision.
 - Keep **Traefik** as the public API ingress (ADR-002) for independent Go Budget, Portfolio and FIRE services and separate Python AI/Analytics services (ADR-004/ADR-007).
 - Implement the web client as an **API consumer** with explicit loading, failed-request and service-degradation states. When the API is unavailable, the HTML/JS/CSS should still load if the static hosting infrastructure is reachable. The UI must **not** represent missing balances or unavailable service responses as zero.
 - Use **shared, versioned API contracts** usable by the web client and potential future desktop/mobile applications; do not create mandatory backend coupling to the SPA runtime.
@@ -102,3 +102,4 @@ Solid arrows show static asset delivery and the Release 1 private Web BFF path; 
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: Browser login and BFF-managed sessions](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)
+- [ADR-021: GitHub Actions and GitOps](0021-github-organization-actions-argocd-gitops.md)
