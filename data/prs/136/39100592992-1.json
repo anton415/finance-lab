@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "record_kind": "github_pr_ci_observation",
+  "collected_at": "2026-10-18T05:27:17.699Z",
+  "collector_run": {
+    "id": "39100592992",
+    "attempt": "1",
+    "sha": "10f879fd12a001782a4dac24447d695ca11fd4db"
+  },
+  "pr": {
+    "number": 136,
+    "state": "open",
+    "draft": true,
+    "created_at": "2026-10-18T05:15:14Z",
+    "updated_at": "2026-10-18T05:27:16Z",
+    "closed_at": "unknown",
+    "merged_at": "unknown",
+    "head_sha": "aa9afa025f845a0d3a2f9b950e081ac0575553b2",
+    "base_sha": "10f879fd12a001782a4dac24447d695ca11fd4db",
+    "commits": 8,
+    "additions": 259,
+    "deletions": 0,
+    "changed_files": 4
+  },
+  "reviews": [],
+  "ci_runs": []
+}
