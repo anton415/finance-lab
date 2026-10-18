@@ -63,7 +63,7 @@ The solid path is the **private browser read-composition and write-forwarding pa
 
 - Adds another service to build, deploy, monitor and secure, but centralizes UI-specific aggregation without moving financial domain logic into Traefik or Budget Service.
 - Allows parallel requests, bounded response times and isolated per-service failures, preserving domain independence.
-- Maintain explicit, preferably versioned API contracts; shared TypeScript types do not remove the need to validate Go API payloads at the boundary.
+- Maintain explicit, preferably versioned API contracts; shared TypeScript types do not remove the need to validate Go API payloads at the boundary. **Under ADR-022, monetary values are validated decimal strings with currencies and must not pass through JS `number` for authoritative computations**; the owning Go service performs financial arithmetic.
 - Add integration tests for user isolation, missing/invalid security context, partial outages, unexpected response data, deadline propagation and disconnected clients.
 - Does not select GraphQL, a mobile BFF, server-side rendering, an HTTP framework, a BFF session-store technology or the exact browser cookie/refresh/logout implementation. BFF-managed browser sessions are accepted in ADR-013.
 
@@ -76,3 +76,4 @@ The solid path is the **private browser read-composition and write-forwarding pa
 - [ADR-011: Public observability dashboard](0011-public-sanitized-observability-dashboard.md)
 - [ADR-013: BFF-managed browser authentication](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
+- [ADR-022: Exact Money DTO](0022-exact-decimal-money-currency-contract.md)

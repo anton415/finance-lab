@@ -34,7 +34,7 @@ The AI coordinator can propose scenarios, choose from approved test plans, summa
 
 - Record test scenario, versions, synthetic dataset/seed, hardware and resource limits, measured p95 latency, throughput, error rates, response correctness and recovery time. Correlate failures with **Grafana, Prometheus, Loki, OpenTelemetry and Jaeger** traces/metrics under ADR-001.
 - Follow an engineering loop: **hypothesis → controlled experiment → observable failure or limit → root-cause analysis → improvement → repeated measurement**. Do not invent failures or claim capacity not actually measured.
-- Include financial invariants and authorization tests, not merely successful HTTP status: user isolation, idempotency, correct amounts, committed changes and explicit errors when a dependency fails.
+- Include financial invariants and authorization tests, not merely successful HTTP status: user isolation, idempotency, correct amounts, committed changes and explicit errors when a dependency fails. **Test ADR-022 exact decimals/currencies, cross-currency rejection, and round-trip correctness during retries/concurrent saves.**
 - A load result for the **local workstation is not a cloud-production capacity estimate**: network, cloud VM, resource caps and managed PostgreSQL can differ. Any production capacity claim needs separate approved testing under a representative environment.
 - Manually review and sanitize any experiment summary before publishing as portfolio evidence through the public engineering dashboard (ADR-011). Do not expose credentials, raw security findings, private financial records, internal topology or unsanitized traces in public content.
 
@@ -105,6 +105,7 @@ flowchart TD
 - [ADR-018: Production stateful placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backups and disaster recovery](0019-backup-recovery-objectives-drills.md)
 - [ADR-021: GitHub Actions and Argo CD pipeline](0021-github-organization-actions-argocd-gitops.md)
+- [ADR-022: Exact decimal Money and currencies](0022-exact-decimal-money-currency-contract.md)
 
 ## Technical references
 

@@ -17,7 +17,7 @@ Finance Lab needs analytical workloads beyond basic domain calculations, and its
 - Start with **one narrowly scoped, reproducible computation**, such as a Monte Carlo financial-independence scenario engine. Python owns API/data preparation/orchestration; Rust implements the computational kernel.
 - Keep core FIRE functionality in Go. Advanced analytics is **optional**: a user can track FIRE using manual assumptions even if Analytics is unavailable.
 - Supply authorized, validated financial inputs via service APIs or explicit request snapshots, **not by direct reads from Budget or Portfolio databases**.
-- Preserve the distinction between deterministic numerical verification, simulation uncertainty and financial prediction. Benchmark against a simple reference implementation and test numeric correctness and reproducibility.
+- Preserve the distinction between deterministic numerical verification, simulation uncertainty and financial prediction. Benchmark against a simple reference implementation and test numeric correctness and reproducibility. **ADR-022 requires exact Money/currency representation at financial-service boundaries**, even if stochastic Rust simulation algorithms use explicitly documented approximate arithmetic internally.
 - AI Agent remains independent and does not receive privileged analytics or financial database access by default.
 
 **Release 2 — 2027 planned evolution**
@@ -71,3 +71,4 @@ The highlighted Rust box is an **in-process library**, not a separate service or
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-003: PostgreSQL Database-per-Service](0003-postgresql-database-per-service.md)
 - [ADR-015: Redis simulation cache and MongoDB saved reports](0015-analytics-redis-cache-mongodb-reports.md)
+- [ADR-022: Exact monetary domain boundaries](0022-exact-decimal-money-currency-contract.md)

@@ -55,9 +55,9 @@ The solid arrows show **separately credentialed database access**. Keycloak owns
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
 - One managed physical PostgreSQL cluster reduces self-managed database work but shares a failure domain among Go domain data and Keycloak identity. **ADR-018 fixes its placement outside K3s**; **ADR-019 sets automated managed backups, PITR, tested restoration and initial RPO/RTO targets**. Host count/HA tier, exact backup retention and measured cost remain implementation work.
-- Data durability, recovery, user isolation, money representations and backup validation remain required regardless of architecture.
+- Data durability, recovery, user isolation and backup validation remain required regardless of architecture. **ADR-022 now selects exact decimal Money values and explicit currencies for new versioned production APIs**, stored in each service database with PostgreSQL `NUMERIC`; exact column precision/scale awaits domain design.
 - The Go financial domain services retain PostgreSQL as their authoritative store. **ADR-015** separately accepts Redis as an optional Python Analytics simulation cache and MongoDB as a store of derived saved analysis reports; neither replaces Go-owned financial records. Cache-invalidation implementation remains separate.
-- Existing budget T2 persistence, exact-string amount semantics, versioning, ownership and idempotency contracts must be preserved or explicitly superseded through a later decision when the Java proof-of-concept is migrated.
+- Existing V2 budget backup original-string amount semantics and Java/Spring T2 persistence, versioning, ownership and idempotency rules **remain unchanged**. The new ADR-022 production Money contract requires a separately approved, versioned migration.
 
 ## References
 
@@ -67,3 +67,4 @@ The solid arrows show **separately credentialed database access**. Keycloak owns
 - [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)
 - [ADR-018: Managed PostgreSQL placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-022: Exact decimal Money and currency contract](0022-exact-decimal-money-currency-contract.md)

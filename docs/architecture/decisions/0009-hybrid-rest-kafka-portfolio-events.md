@@ -62,7 +62,7 @@ This is a **logical process diagram**, not a final deployment specification. The
 ## Required design and verification before implementation
 
 1. Define the **first Portfolio event** and its business semantics, schema/version, owner, publication trigger, topic and partition key (e.g., ordered by portfolio/account where necessary). Do not prematurely equate every purchase with an immediately recalculated valuation.
-2. Include stable `event_id`, `event_type`, `occurred_at`, schema version and appropriate `correlation_id`, `causation_id` and trace propagation, based on ShareTrip observability lessons (ADR-001). Keep payloads minimal and avoid leaking sensitive financial data or user identities into logs and public dashboards.
+2. Include stable `event_id`, `event_type`, `occurred_at`, schema version and appropriate `correlation_id`, `causation_id` and trace propagation, based on ShareTrip observability lessons (ADR-001). **When an event carries money, use versioned exact decimal strings and explicit currency (ADR-022), not floating-point JSON numbers.** Keep payloads minimal and avoid leaking sensitive financial data or user identities into logs and public dashboards.
 3. Specify producer retries, outbox recovery, consumer idempotency, replay, error handling and poison-message policy. Exact retry limits, dead-letter behavior, broker security and operational topology require implementation-level design.
 4. Test failure after database commit but before Kafka publication, Kafka downtime, duplicate delivery, consumer downtime and eventual catch-up. Assert that committed financial records remain correct and independent of Analytics availability.
 5. Monitor outbox backlog, publish failures, consumer lag and end-to-end event-processing delay; connect traces/logs via correlation context. Observability must never be required for a financial command to succeed.
@@ -84,5 +84,6 @@ This is a **logical process diagram**, not a final deployment specification. The
 - [ADR-018: K3s-hosted Kafka and broker recovery boundaries](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Disaster recovery and event reconciliation](0019-backup-recovery-objectives-drills.md)
 - [ADR-015: Analytics Redis cache and MongoDB saved reports](0015-analytics-redis-cache-mongodb-reports.md)
+- [ADR-022: Versioned money event values](0022-exact-decimal-money-currency-contract.md)
 - [Job4j: Asynchrony and Kafka](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/09-asynchrony-and-events-kafka.md)
 - [Job4j: Transactional outbox and inbox](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/11-outbox-inbox-transaction.md)
