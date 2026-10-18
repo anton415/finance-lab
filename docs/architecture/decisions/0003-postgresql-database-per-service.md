@@ -20,6 +20,34 @@ No service reads or writes another service's database tables directly, even when
 
 Service-specific database roles should receive only the privileges needed for their database. Migrations belong with the owning service's code rather than a generic shared database application.
 
+## Architecture diagram
+
+```mermaid
+flowchart TD
+    subgraph SERVICES["Independent Go services"]
+        B["Budget Service"]
+        P["Portfolio Service"]
+        F["FIRE Service"]
+    end
+    subgraph PG["One PostgreSQL cluster / instance initially"]
+        BDB[("Budget DB")]
+        PDB[("Portfolio DB")]
+        FDB[("FIRE DB<br/>if persistence is needed")]
+    end
+
+    B -->|"Own credentials<br/>Own migrations"| BDB
+    P -->|"Own credentials<br/>Own migrations"| PDB
+    F -.->|"Only when state is persisted"| FDB
+
+    classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
+    classDef database fill:#E7EFFF,stroke:#466FD1,color:#162B58;
+    classDef conditional fill:#FFF1DC,stroke:#B77D20,color:#563908;
+    class B,P,F service;
+    class BDB,PDB database;
+    class FDB conditional;
+```
+
+The solid arrows show **service-owned database access**. The dashed FIRE path is conditional on storing durable FIRE state. Sharing one PostgreSQL instance does **not** permit cross-service table access or provide physical fault isolation.
 ## Consequences and boundaries
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
