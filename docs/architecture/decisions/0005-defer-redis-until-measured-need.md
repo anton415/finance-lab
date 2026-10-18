@@ -1,9 +1,13 @@
 # ADR-005: Defer Redis until a demonstrated caching need
 
-- **Status:** Accepted (decision to defer; Redis not selected for deployment)
+- **Status:** Superseded by [ADR-008](0008-redis-mongodb-2026-learning.md) on 2026-10-18
 - **Recorded:** 2026-10-18
 - **Scope:** Finance Lab microservice caching strategy
 - **Potential review point:** Second product release in 2027 (tentative, not a commitment)
+
+## Historical note
+
+This records the **previous** decision to defer Redis and is preserved for traceability. The current accepted direction is to include **Redis and MongoDB in the 2026 Finance Lab learning scope** (ADR-008), with their exact implementations still subject to design. The diagram and statements below are historical, not the current release plan.
 
 ## Context
 
