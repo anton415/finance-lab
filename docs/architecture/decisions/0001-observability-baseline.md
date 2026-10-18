@@ -27,6 +27,32 @@ Instrument end-to-end user operations rather than relying only on per-service up
 
 Treat observability as sensitive: do not emit personal financial values, secrets, credentials, tokens or unnecessary identifiers into logs or metric labels. Prefer bounded-cardinality labels. A possible public portfolio dashboard may show **sanitized, aggregate operational metrics only**; public access and sanitization policies remain separate decisions.
 
+## Architecture diagram
+
+```mermaid
+flowchart TD
+    S["Independent Finance Lab services<br/>Budget · Portfolio · FIRE · AI Agent"]
+
+    subgraph OBS["Finance Lab Platform — shared observability"]
+        P["Prometheus<br/>Metrics"]
+        L["Loki<br/>Structured logs"]
+        J["Jaeger<br/>Trace investigation"]
+        G["Grafana<br/>Dashboards and log exploration"]
+    end
+
+    S -->|"Metrics endpoints"| P
+    S -->|"Structured logs<br/>(shipper TBD)"| L
+    S -->|"OpenTelemetry traces<br/>(pipeline TBD)"| J
+    P --> G
+    L --> G
+
+    classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
+    classDef platform fill:#E7EFFF,stroke:#466FD1,color:#162B58;
+    class S service;
+    class P,L,J,G platform;
+```
+
+The arrows describe **logical telemetry flows**, not a selected transport or collector topology. Each service is instrumented independently; the platform centralizes analysis. Jaeger handles trace investigation separately; Grafana-to-Jaeger integration remains optional.
 ## Consequences and boundaries
 
 - Reuses ShareTrip's practical lessons on logs, metrics, tracing and distributed-process observability.
