@@ -64,14 +64,14 @@ flowchart TD
     class RUST native;
 ```
 
-This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. Optional service interactions, frontend availability and asynchronous messaging are undecided. Keycloak identity is accepted separately in ADR-006.
+This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. A hybrid REST + Kafka integration flow beginning with Portfolio is accepted separately in ADR-009. Further service interactions, frontend availability and messaging contracts remain to be designed. Keycloak identity is accepted separately in ADR-006.
 
 ## Migration and deferred choices
 
 - The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
 - Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
-- Keycloak central identity and per-service resource authorization are accepted in ADR-006. Specific client sessions, delegated service identity, event architecture, client-specific BFFs, public dashboard access and deployment destinations remain separate decisions.
+- Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. Specific client sessions, delegated service identity, event contracts, client-specific BFFs, public dashboard access and deployment destinations remain separate design work.
 
 ## Related decisions
 
@@ -80,3 +80,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-003: PostgreSQL Database-per-Service](0003-postgresql-database-per-service.md)
 - [ADR-006: Keycloak identity and service-owned authorization](0006-keycloak-identity-service-authorization.md)
 - [ADR-007: Python Analytics with in-process Rust](0007-python-analytics-rust-library.md)
+- [ADR-009: Hybrid REST + Kafka starting with Portfolio](0009-hybrid-rest-kafka-portfolio-events.md)
