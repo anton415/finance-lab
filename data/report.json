@@ -605,11 +605,11 @@
     {
       "pr_number": 136,
       "cycle_time_hours": "unknown",
-      "commits": 22,
-      "additions": 1051,
+      "commits": 23,
+      "additions": 1138,
       "deletions": 0,
-      "changed_files": 14,
-      "ci_attempts": 15,
+      "changed_files": 15,
+      "ci_attempts": 16,
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
