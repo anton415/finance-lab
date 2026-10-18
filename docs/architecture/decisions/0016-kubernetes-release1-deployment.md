@@ -20,59 +20,69 @@ Yandex Cloud remains the planned deployment environment. Its managed Kubernetes 
 - Build **versioned OCI container images** and maintain **declarative Kubernetes deployment configuration**. For normally stateless HTTP workloads use `Deployment` and `Service` resources with suitable readiness, liveness and (where justified) startup probes, resource requests/limits and controlled rollout/rollback. Deploy service updates independently and verify that one service can be restarted without unnecessarily redeploying another.
 - Treat Kubernetes as a shared infrastructure failure domain: **Kubernetes does not by itself guarantee high availability, zero downtime, multi-zone resilience, backup recovery or fault isolation at the node/cluster level**. Those require separately specified capacity, node counts, topology and tests.
 - Require explicit security configuration for HTTPS/API exposure, workload/service accounts and minimal RBAC, namespace and network isolation where supported, restricted secret delivery, secure internal service transport and observability (ADRs 001, 006, 013, 014). Do not store financial credentials in plain Kubernetes manifests or container images.
-- Preserve domain database ownership from ADR-003. **This decision does not require PostgreSQL, Kafka, Keycloak, Redis, MongoDB, or the observability backends to run inside Kubernetes.** Choose managed/external vs in-cluster placement **per stateful component** using cost, privacy, backup, restoration and operational-risk assessments. Do not assume a `StatefulSet` alone solves data durability.
+- Preserve domain database ownership from ADR-003. **ADR-018 now places PostgreSQL in Yandex Managed PostgreSQL outside K3s**, with separate Go-domain and Keycloak logical databases; **Kafka, Keycloak, Redis, MongoDB and private observability run inside K3s**. Exact broker/storage/backup details remain implementation decisions; a `StatefulSet` alone does not solve durability.
 - Docker Compose, kind or k3d **may be used as local development/test conveniences**, but Docker Compose is **not** the target cloud deployment platform for Release 1.
 
 ## Architecture diagram
 
 ```mermaid
 flowchart TD
-    ORIGIN[("Yandex Object Storage<br/>Static React assets")]
+    ORIGIN[("Object Storage<br/>Static React SPA")]
     CDN["Cloud CDN"]
-    WEB["Browser<br/>Finance Lab SPA"]
-    REG["OCI container registry<br/>Versioned images"]
+    WEB["Browser"]
+    REG["OCI Registry<br/>Versioned images"]
 
-    subgraph CLOUD["Yandex Cloud target environment"]
-        subgraph K8S["Kubernetes cluster<br/>K3s on Yandex Cloud VM(s) · Release 1"]
-            EDGE["Traefik<br/>Gateway/Ingress"]
-            BFF["Web BFF Deployment<br/>TypeScript + Node.js"]
-            B["Budget Deployment<br/>Go"]
-            P["Portfolio Deployment<br/>Go"]
-            F["FIRE Deployment<br/>Go"]
-            AN["Analytics Deployment<br/>Python + Rust library"]
-            AI["AI Agent Deployment<br/>Python"]
+    subgraph CLOUD["Yandex Cloud"]
+        PG[("Managed PostgreSQL<br/>Budget / Portfolio / FIRE / Keycloak DBs")]
+        subgraph K3S["K3s on Yandex VM(s)"]
+            EDGE["Traefik"]
+            BFF["Web BFF · TypeScript"]
+            B["Budget · Go"]
+            P["Portfolio · Go"]
+            F["FIRE · Go"]
+            AN["Analytics · Python + Rust"]
+            AI["AI Agent · Python"]
+            KC["Keycloak"]
+            KF[("Kafka")]
+            R[("Redis")]
+            M[("MongoDB")]
+            OBS["Private observability stack"]
 
-            EDGE -->|"Private web routes"| BFF
-            BFF -->|"Authorized APIs"| B
-            BFF -->|"Authorized APIs"| P
-            BFF -->|"Authorized APIs"| F
-            BFF -.->|"Approved use cases"| AN
-            BFF -.->|"Approved use cases"| AI
+            EDGE --> BFF
+            BFF --> B
+            BFF --> P
+            BFF --> F
+            BFF -.-> AN
+            BFF -.-> AI
+            BFF <-->|"OIDC"| KC
+            AN --> R
+            AN --> M
+            P -.->|"Outbox event relay"| KF
+            KF -.->|"Events"| AN
         end
     end
-
-    STATE["Stateful platform dependencies<br/>Placement determined separately"]
-
     ORIGIN --> CDN
-    CDN -->|"Static site"| WEB
-    WEB -->|"HTTPS private API"| EDGE
-    REG -.->|"Image deployment"| BFF
-    REG -.->|"Versioned images"| AN
-    BFF -.->|"Keycloak / sessions"| STATE
-    B -.->|"PostgreSQL"| STATE
-    AN -.->|"Redis / MongoDB / Kafka"| STATE
+    CDN --> WEB
+    WEB -->|"HTTPS"| EDGE
+    B -->|"Own logical DB"| PG
+    P -->|"Own logical DB"| PG
+    F -.->|"Own logical DB if used"| PG
+    KC -->|"Separate identity DB"| PG
+    REG -.->|"Deploy OCI images"| BFF
+    B -.->|"Metrics / logs / traces"| OBS
+    AN -.->|"Metrics / logs / traces"| OBS
 
     classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
-    classDef edge fill:#E7EFFF,stroke:#466FD1,color:#162B58;
-    classDef app fill:#E5F5EC,stroke:#278254,color:#103B26;
-    classDef pending fill:#FFF1DC,stroke:#B77D20,color:#563908;
+    classDef managed fill:#E7EFFF,stroke:#466FD1,color:#162B58;
+    classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
+    classDef support fill:#FFF1DC,stroke:#B77D20,color:#563908;
     class ORIGIN,CDN,WEB client;
-    class REG,EDGE edge;
-    class BFF,B,P,F,AN,AI app;
-    class STATE pending;
+    class REG,EDGE,PG managed;
+    class BFF,B,P,F,AN,AI,KC,OBS service;
+    class KF,R,M support;
 ```
 
-The diagram shows **logical application deployment and API paths**, not approved node counts, availability zones or managed-service choices. Individual downstream arrows to the stateful-dependencies box are illustrative; no component receives direct cross-domain database access by implication. The SPA and CDN are intentionally outside the cluster.
+The diagram shows **logical placement**, not approved node counts or availability zones. ADR-018 accepts Managed PostgreSQL outside K3s and the remaining stateful platform systems inside K3s. The PostgreSQL node represents separate logical databases and credentials, **not cross-service database access**. The SPA/CDN are outside the cluster.
 
 ## Minimum release verification
 
@@ -87,7 +97,7 @@ The diagram shows **logical application deployment and API paths**, not approved
 - Adds substantial Kubernetes, networking, provisioning, monitoring and security work to the 2026 deadline. Scope should prioritize **one functioning end-to-end deployment** over advanced orchestration features.
 - **ADR-017 accepts K3s first and a temporary Yandex Managed Kubernetes comparison in early 2027.** The cluster's worker count, VM sizing, regions/zones, cost ceiling, precise infrastructure-as-code and CI/CD/GitOps mechanism remain unselected. The eventual production cluster after comparison must be chosen from measured evidence and an approved migration plan.
 - **Traefik provider/routing API** (Kubernetes Ingress vs Gateway API), CNI/network policy behavior, ingress load balancer/DNS/TLS details and secret-management implementation remain configuration decisions.
-- Stateful workload location (managed/external or in-cluster), backup/restore, persistent-volume design, message-broker topology and session-store technology remain open.
+- Stateful component **placement is accepted in ADR-018**. Backup/restore implementation, persistent-volume design, message-broker topology, managed PostgreSQL tier and BFF session-store technology remain open.
 - The 2027 release can pursue additional reliability or scaling capabilities, but **the initial use of Kubernetes is not postponed**.
 
 ## References
@@ -101,3 +111,4 @@ The diagram shows **logical application deployment and API paths**, not approved
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-010: Static SPA and independent APIs](0010-independent-spa-and-api-first-clients.md)
 - [ADR-017: K3s-first and managed Kubernetes comparison](0017-k3s-first-managed-kubernetes-comparison.md)
+- [ADR-018: Managed PostgreSQL and self-hosted platform state](0018-hybrid-managed-postgresql-k3s-platform-state.md)

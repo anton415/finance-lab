@@ -21,7 +21,7 @@ Use the following **initial standard** in Finance Lab Platform:
 | OpenTelemetry | Vendor-neutral application instrumentation and context propagation |
 | Jaeger | Distributed trace collection/storage and investigation |
 
-The platform operates shared observability infrastructure. Every application service remains responsible for emitting its own structured logs, metrics and trace context; no financial business logic belongs in the telemetry stack.
+The platform operates shared observability infrastructure. **ADR-018 places the private Grafana, Prometheus, Loki, Jaeger and necessary collection/shipping workloads inside K3s for Release 1**, with storage, retention and backup implementation still to be specified. Every application service remains responsible for emitting its own structured logs, metrics and trace context; no financial business logic belongs in the telemetry stack.
 
 Instrument end-to-end user operations rather than relying only on per-service uptime. Propagate W3C `traceparent` across HTTP boundaries; use request and business correlation identifiers as needed. If asynchronous messaging is adopted later, propagate event identifiers and correlation/causation metadata through that transport as appropriate. This ADR **does not decide** whether to use Kafka or another event system.
 
@@ -58,10 +58,11 @@ The arrows describe **logical telemetry flows**, not a selected transport or col
 - Reuses ShareTrip's practical lessons on logs, metrics, tracing and distributed-process observability.
 - Creates infrastructure costs and operational work; set retention, sampling and alert thresholds separately.
 - Avoid making application correctness depend on telemetry availability.
-- Collector/shipper choices, exporter implementation, private operator-dashboard access controls and deployment topology remain undecided. Public static-export boundaries are recorded in ADR-011.
+- Collector/shipper choices, exporter implementation, private operator-dashboard access controls, storage and retention configuration remain undecided. **K3s deployment location is accepted in ADR-018**; public static-export boundaries are recorded in ADR-011.
 
 ## References
 
 - [ShareTrip observability lesson](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/14-process-observability.md)
 - [ShareTrip implementation](https://github.com/anton415/share_trip)
 - [ADR-011: Public sanitized observability dashboard](0011-public-sanitized-observability-dashboard.md)
+- [ADR-018: K3s-hosted observability](0018-hybrid-managed-postgresql-k3s-platform-state.md)

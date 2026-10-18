@@ -10,7 +10,7 @@ Finance Lab has independently usable Budget, Portfolio and FIRE services, plus a
 
 ## Decision
 
-- Adopt **Keycloak** as the **central identity provider**, operated as part of Finance Lab Platform. It authenticates users and issues standards-based OpenID Connect/OAuth 2.0 tokens.
+- Adopt **Keycloak** as the **central identity provider**, operated as part of Finance Lab Platform. It authenticates users and issues standards-based OpenID Connect/OAuth 2.0 tokens. **ADR-018 hosts the Keycloak workload in K3s and its dedicated identity database in Yandex Managed PostgreSQL**, using credentials separate from the financial databases.
 - Keep **Traefik** as the public API Gateway. It handles routing and can apply coarse edge protections; it is **not** the sole authorization enforcement point.
 - Each financial Go service (Budget, Portfolio, FIRE) verifies the security context presented to its API and makes its **own resource-level authorization decision** using service-owned records. For example, Portfolio Service determines ownership of a portfolio, independently of Budget Service.
 - The AI Agent and Analytics Service must not bypass user authorization when requesting financial data. The accepted Web BFF (ADR-012) uses Keycloak user-token exchange for delegated downstream calls; background workloads use restricted client credentials (ADR-014). AI Agent user delegation and exact approval rules remain separate security design work.
@@ -66,7 +66,7 @@ The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth toke
 ## Consequences
 
 - Centralizes accounts and sign-in while preserving domain independence and ownership.
-- Adds Keycloak operations, configuration and security maintenance to the platform.
+- Adds Keycloak operations, configuration and security maintenance to the platform. Keycloak runs in K3s while its identity database runs in managed PostgreSQL (ADR-018), so cluster outages can still prevent login even when the database remains healthy.
 - Maintains a coherent user identity across Go services, but requires separate authorization tests in each.
 - Requires an explicit public/private route policy for any portfolio and observability showcase.
 
@@ -79,3 +79,4 @@ The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth toke
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
+- [ADR-018: Keycloak placement and identity database](0018-hybrid-managed-postgresql-k3s-platform-state.md)

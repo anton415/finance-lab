@@ -12,7 +12,7 @@ We need two bounded, meaningful persistence exercises without turning secondary 
 
 ## Decision
 
-**The Python Analytics Service owns both integrations for Release 1:**
+**The Python Analytics Service owns both integrations for Release 1.** ADR-018 places both Redis and MongoDB inside self-managed K3s, while the authoritative PostgreSQL cluster remains external in Yandex Managed PostgreSQL:
 
 1. **Redis: optional cache of expensive analytical/simulation results.** Use a cache-aside pattern for a narrowly scoped FIRE/Monte Carlo simulation. After authenticating and authorizing the request, Analytics looks up a cache entry, computes with its Rust library on a miss, and writes the result with a bounded **TTL**. Redis is **not authoritative**; cache failure or cache eviction does not delete financial records or saved reports. Compute normally on a cache miss or Redis outage where possible.
 2. **MongoDB: durable, versioned documents for explicitly saved analytical reports.** When an authorized user chooses to save a generated report, Analytics persists the report as a document with an ownership reference, report/schema version, model version, input assumptions (handled as sensitive), data-snapshot/version metadata, calculation timestamp and output. MongoDB stores **derived report artifacts**, not budgets, portfolio transactions, FIRE's authoritative business state or source data from other services. Index and query only through the Analytics Service's authorized API; the report-storage contract, backup/retention and exact indexes remain implementation work.
@@ -61,7 +61,7 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 ## Required implementation verification
 
 - **Cache:** Compare hits/misses against the Rust reference output; test TTL expiry, Redis outage, cache poisoning/cross-user isolation, changes in assumptions/source version/model version, and reproducible simulation seeds.
-- **Reports:** Test explicit save, fetch, owner-only access, document schema versioning, indexing, unauthorized reads, data retention/deletion and MongoDB outage without false success.
+- **Reports:** Test explicit save, fetch, owner-only access, document schema versioning, indexing, unauthorized reads, data retention/deletion, **K3s persistent-volume backup/restore**, and MongoDB outage without false success.
 - **Integration:** Verify that Kafka delivery delay or duplicates cannot silently resurrect stale results and that core domain APIs continue to operate if either Redis or MongoDB is unavailable.
 - **Operations:** Instrument cache hit/miss/latency/error, report-save latency/errors, and expiry/staleness counts without exposing financial inputs or user identifiers in metric labels.
 
@@ -69,7 +69,7 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 
 - Includes both Redis and MongoDB in practical 2026 Finance Lab development as required by ADR-008, while isolating their complexity inside Analytics.
 - Adds two datastores and associated security, backup, test and operational work; keep the Release 1 use cases deliberately small.
-- Cache TTL, exact MongoDB document/index schema, deployment topology, retention policies, encrypted storage configuration and event-based invalidation strategy are deferred to implementation.
+- Cache TTL, exact MongoDB document/index schema, retention policies, encrypted storage configuration, persistent-volume/backup implementation and event-based invalidation strategy are deferred to implementation. **Storage placement in K3s is accepted by ADR-018**.
 - Redis is **not selected** as the BFF session store; that remains an independent open question under ADR-013.
 - Nothing here changes the planned Release 2 evaluation of extracting Rust simulations to a separate service (ADR-007).
 
@@ -81,3 +81,4 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 - [ADR-009: REST + Kafka Portfolio events](0009-hybrid-rest-kafka-portfolio-events.md)
 - [ADR-011: Public observability dashboard](0011-public-sanitized-observability-dashboard.md)
 - [ADR-014: Keycloak service-to-service security](0014-keycloak-service-to-service-security.md)
+- [ADR-018: K3s-hosted Redis/MongoDB](0018-hybrid-managed-postgresql-k3s-platform-state.md)

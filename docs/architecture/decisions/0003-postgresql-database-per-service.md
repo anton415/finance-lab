@@ -10,7 +10,7 @@ Finance Lab manages financial records for independent capabilities. Strong trans
 
 ## Decision
 
-Use **PostgreSQL as the primary persistent database**. Apply the **Database-per-Service** pattern: each business service owns its own logical database, database credentials, schema changes and migrations. Initially, separate logical databases may run on **one physical PostgreSQL cluster/instance**.
+Use **PostgreSQL as the primary persistent database**. Apply the **Database-per-Service** pattern: each business service owns its own logical database, database credentials, schema changes and migrations. **ADR-018 places the initial physical PostgreSQL cluster in Yandex Managed PostgreSQL, outside K3s**. It can host separate Budget, Portfolio and FIRE databases **and a distinct Keycloak identity database**, each with appropriately scoped credentials. Managed placement does not guarantee physical high availability.
 
 - **Budget Service** owns its budget records and their persistence contract.
 - **Portfolio Service** owns investment accounts, transactions, positions or valuations defined by its contracts.
@@ -29,29 +29,32 @@ flowchart TD
         P["Portfolio Service"]
         F["FIRE Service"]
     end
-    subgraph PG["One PostgreSQL cluster / instance initially"]
+    subgraph PG["Yandex Managed PostgreSQL<br/>One physical cluster initially"]
         BDB[("Budget DB")]
         PDB[("Portfolio DB")]
         FDB[("FIRE DB<br/>if persistence is needed")]
+        KDB[("Keycloak identity DB")]
     end
+    KC["Keycloak<br/>Self-hosted in K3s"]
 
     B -->|"Own credentials<br/>Own migrations"| BDB
     P -->|"Own credentials<br/>Own migrations"| PDB
     F -.->|"Only when state is persisted"| FDB
+    KC -->|"Own identity credentials"| KDB
 
     classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
     classDef database fill:#E7EFFF,stroke:#466FD1,color:#162B58;
     classDef conditional fill:#FFF1DC,stroke:#B77D20,color:#563908;
-    class B,P,F service;
-    class BDB,PDB database;
+    class B,P,F,KC service;
+    class BDB,PDB,KDB database;
     class FDB conditional;
 ```
 
-The solid arrows show **service-owned database access**. The dashed FIRE path is conditional on storing durable FIRE state. Sharing one PostgreSQL instance does **not** permit cross-service table access or provide physical fault isolation.
+The solid arrows show **separately credentialed database access**. Keycloak owns only its identity database; it is not a finance domain service. The dashed FIRE path is conditional on durable FIRE state. Sharing one managed physical PostgreSQL cluster **does not** permit cross-service table access or provide physical fault isolation.
 ## Consequences and boundaries
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
-- One initial database instance is operationally economical, but does **not** provide physical failure isolation between services. Release 1 Kubernetes orchestration (ADR-016) **does not determine whether PostgreSQL is managed outside the cluster or hosted inside it**; choose durable storage, backup and restoration separately.
+- One managed physical PostgreSQL cluster reduces self-managed database work but shares a failure domain among Go domain data and Keycloak identity. **ADR-018 fixes its placement outside K3s**; select host count/HA, backup retention and tested restoration separately, and measure actual managed-service cost.
 - Data durability, recovery, user isolation, money representations and backup validation remain required regardless of architecture.
 - The Go financial domain services retain PostgreSQL as their authoritative store. **ADR-015** separately accepts Redis as an optional Python Analytics simulation cache and MongoDB as a store of derived saved analysis reports; neither replaces Go-owned financial records. Cache-invalidation implementation remains separate.
 - Existing budget T2 persistence, exact-string amount semantics, versioning, ownership and idempotency contracts must be preserved or explicitly superseded through a later decision when the Java proof-of-concept is migrated.
@@ -62,3 +65,4 @@ The solid arrows show **service-owned database access**. The dashed FIRE path is
 - [Database per Service pattern](https://microservices.io/patterns/data/database-per-service.html)
 - [ADR-015: Analytics-owned Redis and MongoDB](0015-analytics-redis-cache-mongodb-reports.md)
 - [ADR-016: Kubernetes Release 1 deployment](0016-kubernetes-release1-deployment.md)
+- [ADR-018: Managed PostgreSQL placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)

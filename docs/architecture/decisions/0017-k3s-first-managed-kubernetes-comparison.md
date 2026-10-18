@@ -17,7 +17,7 @@ The user accepted a staged strategy: **start with K3s, try Yandex Managed Kubern
 
 - Deploy the containerized Finance Lab backend and **Traefik on self-managed K3s running on Yandex Cloud VM infrastructure**, satisfying ADR-016. Start as economically as practical; favor a single VM **only if measured CPU, memory, storage and workload demands fit**. A single-VM K3s deployment is **not highly available**.
 - Maintain portable OCI images and **reproducible, standards-based Kubernetes manifests/Helm charts** with environment-specific settings. Avoid relying on K3s-only APIs or storage behavior in application manifests when reasonable.
-- Keep the independently hosted React SPA on Object Storage + CDN (ADR-010). Whether PostgreSQL, Kafka, Keycloak, Redis, MongoDB and observability storage run inside or outside the cluster is **not selected** by this decision (ADR-016).
+- Keep the independently hosted React SPA on Object Storage + CDN (ADR-010). **ADR-018 now places Yandex Managed PostgreSQL outside K3s and Kafka, Keycloak, Redis, MongoDB and the private observability stack inside K3s**; include their actual memory, disk and backup costs when sizing the initial cluster.
 - Verify installation, upgrades/restarts, authenticated ingress, application rollouts, failure recovery, backups/restores for stateful systems, resource utilization and **actual monthly cost**. Approve a spending ceiling before long-running provisioning. Define an explicit operational owner for security updates and cluster maintenance.
 
 ### Phase 2 — Temporary managed comparison (planned early 2027)
@@ -59,7 +59,7 @@ flowchart TD
     class TEMP,DECIDE,MOVE future;
 ```
 
-**The two clusters are sequential stages, not an active-active design.** The managed cluster is a time-bounded test. Data location and migration mechanics are intentionally omitted pending the separate stateful-dependency and migration plans.
+**The two clusters are sequential stages, not an active-active design.** The managed cluster is a time-bounded test. ADR-018 chooses Release 1 component placement; **cross-cluster data copies, persistent-volume migration and cutover mechanics remain unapproved**.
 
 ## Required verification and risks
 
@@ -77,3 +77,4 @@ flowchart TD
 - [ADR-016: Release 1 Kubernetes platform](0016-kubernetes-release1-deployment.md)
 - [ADR-003: PostgreSQL database ownership](0003-postgresql-database-per-service.md)
 - [ADR-010: Independently hosted SPA](0010-independent-spa-and-api-first-clients.md)
+- [ADR-018: Stateful infrastructure placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
