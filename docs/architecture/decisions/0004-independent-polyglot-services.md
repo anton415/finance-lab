@@ -17,6 +17,8 @@ Finance Lab must allow users to use budgeting, investments and FIRE tracking ind
 | Portfolio Service | Go |
 | FIRE Service | Go |
 | AI Agent Service | Python (existing `finance-lab-agent`) |
+| Analytics Service | Python with an in-process Rust library (see ADR-007) |
+| Identity provider | Keycloak (see ADR-006) |
 | Primary persistence | SQL with PostgreSQL (see ADR-003) |
 | Public API Gateway | Traefik (see ADR-002) |
 
@@ -36,34 +38,45 @@ flowchart TD
         P["Portfolio Service"]
         F["FIRE Service"]
     end
-    subgraph AI["Independent AI capability — Python"]
+    subgraph PYTHON["Separate Python capabilities"]
         A["AI Agent Service"]
+        ANALYTICS["Analytics Service"]
+        RUST["Rust simulation library<br/>In-process, PyO3"]
+        ANALYTICS --> RUST
     end
+    IDP["Keycloak<br/>Platform identity"]
 
     WEB --> G
     G --> B
     G --> P
     G --> F
     G --> A
+    G --> ANALYTICS
+    WEB -->|"OIDC sign-in"| IDP
 
     classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
     classDef platform fill:#E7EFFF,stroke:#466FD1,color:#162B58;
     classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
+    classDef native fill:#FFF1DC,stroke:#B77D20,color:#563908;
     class WEB client;
-    class G platform;
-    class B,P,F,A service;
+    class G,IDP platform;
+    class B,P,F,A,ANALYTICS service;
+    class RUST native;
 ```
 
-This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. Optional service interactions, frontend availability, identity and asynchronous messaging are undecided.
+This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. Optional service interactions, frontend availability and asynchronous messaging are undecided. Keycloak identity is accepted separately in ADR-006.
+
 ## Migration and deferred choices
 
 - The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
-- Rust remains a potential performance-learning experiment rather than an accepted runtime dependency.
-- Domain event architecture, identity and authorization infrastructure, client-specific BFFs, public dashboard access and deployment destinations are separate decisions.
+- Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
+- Keycloak central identity and per-service resource authorization are accepted in ADR-006. Specific client sessions, delegated service identity, event architecture, client-specific BFFs, public dashboard access and deployment destinations remain separate decisions.
 
 ## Related decisions
 
 - [ADR-001: Observability baseline](0001-observability-baseline.md)
 - [ADR-002: Traefik Gateway](0002-traefik-api-gateway.md)
 - [ADR-003: PostgreSQL Database-per-Service](0003-postgresql-database-per-service.md)
+- [ADR-006: Keycloak identity and service-owned authorization](0006-keycloak-identity-service-authorization.md)
+- [ADR-007: Python Analytics with in-process Rust](0007-python-analytics-rust-library.md)
