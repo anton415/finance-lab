@@ -24,7 +24,7 @@ Finance Lab must allow users to use budgeting, investments and FIRE tracking ind
 
 Budget, Portfolio and FIRE are **peer services** with independent business responsibilities, API contracts, deployment lifecycles and data ownership. A user can use Portfolio or FIRE without creating a budget, and can use Budget without Portfolio or FIRE. Any cross-service information exchange must be explicit; the platform does not act as a universal business orchestrator.
 
-The frontend is a client, not the owner of domain state. The deployment topology of web/mobile/desktop clients and their availability guarantees require a separate decision. An independently deployed, always-available frontend is a stated product goal, not a verified behavior under this ADR.
+The frontend is a client, not the owner of domain state. Release 1 uses an independently deployed React/TypeScript static SPA, with Yandex Object Storage + Cloud CDN as its hosting target and reusable APIs for possible desktop/mobile clients (ADR-010). Frontend availability depends on static hosting, DNS and network health; it is not guaranteed.
 
 ## Architecture diagram
 
@@ -64,14 +64,14 @@ flowchart TD
     class RUST native;
 ```
 
-This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. A hybrid REST + Kafka integration flow beginning with Portfolio is accepted separately in ADR-009. Further service interactions, frontend availability and messaging contracts remain to be designed. Keycloak identity is accepted separately in ADR-006.
+This is a **logical capability and ingress diagram**, not a deployment diagram. There are deliberately no mandatory dependencies between Budget, Portfolio and FIRE: users can use any one without using the others. A hybrid REST + Kafka integration flow beginning with Portfolio is accepted separately in ADR-009. Further service interactions, frontend outage behavior and messaging contracts remain to be designed. Keycloak identity is accepted separately in ADR-006.
 
 ## Migration and deferred choices
 
 - The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
 - Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
-- Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. Specific client sessions, delegated service identity, event contracts, client-specific BFFs, public dashboard access and deployment destinations remain separate design work.
+- Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. Specific client sessions, delegated service identity, event contracts, client-specific BFFs, public dashboard access and detailed deployment configuration remain separate design work. The independent SPA hosting approach is accepted in ADR-010.
 
 ## Related decisions
 
@@ -81,3 +81,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-006: Keycloak identity and service-owned authorization](0006-keycloak-identity-service-authorization.md)
 - [ADR-007: Python Analytics with in-process Rust](0007-python-analytics-rust-library.md)
 - [ADR-009: Hybrid REST + Kafka starting with Portfolio](0009-hybrid-rest-kafka-portfolio-events.md)
+- [ADR-010: Independent static SPA and API-first clients](0010-independent-spa-and-api-first-clients.md)
