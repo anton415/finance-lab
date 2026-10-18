@@ -6,7 +6,7 @@
 
 ## Context
 
-Finance Lab's production workloads initially run on K3s in Yandex Cloud (ADRs 016–017). **Yandex Managed PostgreSQL** outside the cluster stores authoritative Go-domain and Keycloak identity databases; self-hosted Kafka, MongoDB, Redis and the observability infrastructure run inside K3s (ADR-018). A VM/node failure, volume corruption, misconfiguration or accidental deletion must not silently destroy private financial data or saved analysis reports.
+Finance Lab's production workloads initially run on K3s in Yandex Cloud (ADRs 016–017). **Yandex Managed PostgreSQL** outside the cluster stores authoritative Go-domain and Keycloak identity databases **and the dedicated BFF session database accepted in ADR-023**; self-hosted Kafka, MongoDB, Redis and the observability infrastructure run inside K3s (ADR-018). A VM/node failure, volume corruption, misconfiguration or accidental deletion must not silently destroy private financial data or saved analysis reports.
 
 Backups and **recovery** are deliberately prioritized before adding high-availability infrastructure. **Recovery from backups is not automatic failover** and does not guarantee uninterrupted service or zero data loss.
 
@@ -16,7 +16,7 @@ Backups and **recovery** are deliberately prioritized before adding high-availab
 
 | State / component | Release 1 strategy | Essential safeguards |
 | --- | --- | --- |
-| **Managed PostgreSQL: Budget, Portfolio, FIRE and Keycloak** | Configure managed backups, WAL/PITR capability and provider-supported retention; restore into an **isolated new PostgreSQL cluster** during a drill | Test restore, logical DB/service credential isolation, consistent recovery point and post-restore connectivity. Availability and precise PITR granularity depend on service configuration |
+| **Managed PostgreSQL: Budget, Portfolio, FIRE, Keycloak and BFF sessions** | Configure managed backups, WAL/PITR capability and provider-supported retention; restore into an **isolated new PostgreSQL cluster** during a drill | Test restore, logical DB/service credential isolation, consistent recovery point and post-restore connectivity. **Never resume restored BFF sessions as active**; revoke them before reopening browser access (ADR-023). Availability and precise PITR granularity depend on service configuration |
 | **MongoDB saved Analytics reports** | Schedule at least **daily encrypted backups**, stored outside the K3s VM in a **private Yandex Object Storage backup bucket** | Consistent database backup method, restore to isolated MongoDB, owner permissions, checksums, retention and deletion tests |
 | **K3s control-plane state** | Back up the K3s datastore with the **appropriate method for its actual SQLite or etcd configuration**, plus required server token/cluster recovery material protected separately | Preserve encryption keys/secret material, test rebuilding a new cluster; Git/Helm is not a substitute for all cluster-state data |
 | **Kafka** | Durable broker volumes plus tested restart/recovery; keep Portfolio outbox records in managed PostgreSQL, and design explicit **reconciliation/replay** for lost or already-acknowledged Kafka events | A broker backup or outbox alone does **not** ensure recovery of every message after the relay marks an event published; test duplicate and missing-event cases |
@@ -33,7 +33,7 @@ Managed PostgreSQL provider snapshots/WAL are a separate mechanism from those Ob
 
 | Scope | Target RPO: maximum intended data loss | Target RTO: intended restoration window |
 | --- | --- | --- |
-| Managed PostgreSQL financial + Keycloak databases | **1 hour** | **24 hours** |
+| Managed PostgreSQL financial + Keycloak + BFF session databases (session rows invalidated upon restore) | **1 hour** | **24 hours** |
 | MongoDB saved analysis reports | **24 hours** | **24 hours** |
 | Rebuild of application/K3s platform | **Reproducible from source-controlled configuration and safely stored state**; stateful loss follows its component RPO | **24 hours** |
 
@@ -41,7 +41,7 @@ RPO/RTO values are **engineering targets**, not claims about the provider or the
 
 ### Required disaster-recovery rehearsal before first release
 
-1. In an **isolated temporary environment**, restore a Managed PostgreSQL backup to a **new cluster**, verify the four separate logical databases and access permissions, validate data integrity and at least one domain query and Keycloak sign-in.
+1. In an **isolated temporary environment**, restore a Managed PostgreSQL backup to a **new cluster**, verify the **five separate logical databases** (Budget, Portfolio, FIRE, Keycloak and BFF sessions) and access permissions, validate financial data integrity and Keycloak sign-in, and **invalidate all restored BFF sessions before opening browser access**. Test that a session revoked before the backup restore does not become valid again.
 2. Restore MongoDB analytical reports from private Object Storage, confirm hashes/versions/owner isolation, and verify a deliberately deleted or expired Redis cache is rebuilt correctly.
 3. Rebuild K3s application services, Traefik and platform configuration from versioned Git/Helm and trusted images, restoring the K3s control-plane state by its actual datastore procedure where relevant. Confirm private secrets, TLS, authorized requests and service probes.
 4. Simulate a Kafka interruption including **an already-published event lost from the broker**, and verify that any required reconciliation replays missing work without duplicating durable side effects.
@@ -51,7 +51,7 @@ RPO/RTO values are **engineering targets**, not claims about the provider or the
 
 ```mermaid
 flowchart TD
-    PG[("Managed PostgreSQL<br/>Finance + Keycloak DBs")]
+    PG[("Managed PostgreSQL<br/>Finance + Keycloak + BFF sessions DBs")]
     PITR[("Provider-managed backups<br/>WAL / PITR")]
     K3S["K3s infrastructure and workloads"]
     MONGO[("MongoDB reports")]
@@ -104,3 +104,4 @@ The flow represents **backup sources and controlled recovery**, not live replica
 - [ADR-017: K3s then managed Kubernetes comparison](0017-k3s-first-managed-kubernetes-comparison.md)
 - [ADR-018: Hybrid managed/stateful placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-020: Local staging and reliability experiments](0020-local-staging-automated-reliability-tests.md)
+- [ADR-023: Session invalidation after restore](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

@@ -33,7 +33,7 @@ flowchart TD
     REG["OCI Registry<br/>Versioned images"]
 
     subgraph CLOUD["Yandex Cloud"]
-        PG[("Managed PostgreSQL<br/>Budget / Portfolio / FIRE / Keycloak DBs")]
+        PG[("Managed PostgreSQL<br/>Budget / Portfolio / FIRE<br/>Keycloak + BFF sessions DBs")]
         subgraph K3S["K3s on Yandex VM(s)"]
             EDGE["Traefik"]
             BFF["Web BFF · TypeScript"]
@@ -68,6 +68,7 @@ flowchart TD
     P -->|"Own logical DB"| PG
     F -.->|"Own logical DB if used"| PG
     KC -->|"Separate identity DB"| PG
+    BFF -->|"Separate session DB"| PG
     REG -.->|"Deploy OCI images"| BFF
     B -.->|"Metrics / logs / traces"| OBS
     AN -.->|"Metrics / logs / traces"| OBS
@@ -97,7 +98,7 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 - Adds substantial Kubernetes, networking, provisioning, monitoring and security work to the 2026 deadline. Scope should prioritize **one functioning end-to-end deployment** over advanced orchestration features.
 - **ADR-017 accepts K3s first and a temporary Yandex Managed Kubernetes comparison in early 2027.** The cluster's worker count, VM sizing, regions/zones, cost ceiling, precise infrastructure-as-code and CI/CD/GitOps mechanism remain unselected. The eventual production cluster after comparison must be chosen from measured evidence and an approved migration plan.
 - **Traefik provider/routing API** (Kubernetes Ingress vs Gateway API), CNI/network policy behavior, ingress load balancer/DNS/TLS details and secret-management implementation remain configuration decisions.
-- Stateful component **placement is accepted in ADR-018**, and **ADR-019 establishes backup/recovery objectives and mandatory restore drills**. Specific backup tooling, persistent-volume design, message-broker topology, managed PostgreSQL tier and BFF session-store technology remain open.
+- Stateful component **placement is accepted in ADR-018**, and **ADR-019 establishes backup/recovery objectives and mandatory restore drills**. Specific backup tooling, persistent-volume design, message-broker topology, managed PostgreSQL tier and **the implementation of the ADR-023 PostgreSQL-backed BFF session store** remain open.
 - The 2027 release can pursue additional reliability or scaling capabilities, but **the initial use of Kubernetes is not postponed**.
 
 ## References
@@ -115,3 +116,4 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
 - [ADR-020: Local staging and automated reliability testing](0020-local-staging-automated-reliability-tests.md)
 - [ADR-021: GitHub Actions CI and Argo CD GitOps](0021-github-organization-actions-argocd-gitops.md)
+- [ADR-023: Managed PostgreSQL sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

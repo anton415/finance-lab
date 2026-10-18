@@ -70,7 +70,7 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 - Includes both Redis and MongoDB in practical 2026 Finance Lab development as required by ADR-008, while isolating their complexity inside Analytics.
 - Adds two datastores and associated security, backup, test and operational work; keep the Release 1 use cases deliberately small.
 - Cache TTL, exact MongoDB document/index schema, retention policies, encrypted storage configuration, persistent-volume/backup implementation and event-based invalidation strategy are deferred to implementation. **Storage placement in K3s is accepted by ADR-018**.
-- Redis is **not selected** as the BFF session store; that remains an independent open question under ADR-013.
+- **ADR-023 explicitly selects a separate Managed PostgreSQL database for BFF sessions.** Redis remains the Analytics-only, non-authoritative simulation cache; neither its TTL nor availability controls user authentication.
 - Nothing here changes the planned Release 2 evaluation of extracting Rust simulations to a separate service (ADR-007).
 
 ## Related decisions
@@ -83,3 +83,4 @@ The arrows describe logical read/compute/save paths, **not a synchronous require
 - [ADR-014: Keycloak service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-018: K3s-hosted Redis/MongoDB](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: MongoDB backup and recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-023: BFF sessions use managed PostgreSQL](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

@@ -12,10 +12,10 @@ We compared browser-side aggregation, a Go BFF, a separate TypeScript/Node.js BF
 
 ## Decision
 
-- Add an **independently deployed Web BFF written in TypeScript on Node.js**. It is separate from both the static React SPA and Go business services. BFF instances should not rely on in-process-only session state; server-side session persistence is required but the store technology is undecided (ADR-013). The HTTP framework (e.g., Fastify or NestJS) is **not yet selected**.
+- Add an **independently deployed Web BFF written in TypeScript on Node.js**. It is separate from both the static React SPA and Go business services. BFF instances should not rely on in-process-only session state; server-side session persistence is provided by a **dedicated Yandex Managed PostgreSQL logical database** under ADR-023. The HTTP framework (e.g., Fastify or NestJS) is **not yet selected**.
 - Route the private web application's BFF endpoints through **Traefik** (ADR-002). The BFF composes **read-only, browser-specific overview responses** and also forwards **all other private browser API calls, including writes**, to the appropriate authorized domain service (ADR-013). It has **no financial business database**, does not own business entities or compute authoritative financial values, and must not become a general-purpose domain orchestrator.
 - Keep domain APIs independently usable via explicitly configured, authenticated routes for future native clients and other approved consumers (ADR-010). No frontend client is required to use Budget before Portfolio or FIRE.
-- Preserve Keycloak as the central identity provider and keep **resource-level authorization within each domain service** (ADR-006). The Web BFF **is the browser-facing OIDC client**: Authorization Code + PKCE, **server-side access/refresh tokens**, an opaque Secure/HttpOnly cookie and CSRF safeguards are accepted in ADR-013. Exact cookie scope, shared session store, OAuth callbacks and refresh/logout operations require implementation design. Downstream user delegation uses Keycloak Token Exchange under ADR-014; exact service audience/scope mappings require testing.
+- Preserve Keycloak as the central identity provider and keep **resource-level authorization within each domain service** (ADR-006). The Web BFF **is the browser-facing OIDC client**: Authorization Code + PKCE, **server-side access/refresh tokens**, an opaque Secure/HttpOnly cookie and CSRF safeguards are accepted in ADR-013. Exact cookie scope, **BFF-owned PostgreSQL session schema and encryption key handling**, OAuth callbacks and refresh/logout operations require implementation design under ADR-023. Downstream user delegation uses Keycloak Token Exchange under ADR-014; exact service audience/scope mappings require testing.
 - A BFF must never authorize resources solely from user identifiers supplied by the browser. Under ADR-014, exchange signed-in user tokens for audience-restricted tokens when accessing domain APIs; domain services validate claims and enforce their own resource ownership. Effective downscoping must be enforced rather than assumed.
 - Bound downstream calls with timeouts and cancellation. Where the product supports it, return **explicitly partial or unavailable** data with freshness/error indicators rather than converting failed reads into zero balances. Define the exact response/error contract before implementation.
 - The **public engineering/observability dashboard** (ADR-011) stays on the static website using sanitized JSON exports; it does **not** require this private Web BFF.
@@ -42,7 +42,7 @@ flowchart TD
     BROWSER -->|"Private web API read/write<br/>Session cookie + CSRF for writes"| GW
     GW -->|"Web-specific routes"| BFF
     BFF <-->|"OIDC code/token exchange"| KEY
-    BFF -->|"Server-side session state"| SESSION[("Private sessions<br/>Store TBD")]
+    BFF -->|"Encrypted OAuth tokens + sessions"| SESSION[("BFF sessions DB<br/>Managed PostgreSQL · ADR-023")]
     BFF -->|"Authorized reads/writes"| B
     BFF -->|"Authorized reads/writes"| P
     BFF -->|"Authorized reads/writes"| F
@@ -65,7 +65,7 @@ The solid path is the **private browser read-composition and write-forwarding pa
 - Allows parallel requests, bounded response times and isolated per-service failures, preserving domain independence.
 - Maintain explicit, preferably versioned API contracts; shared TypeScript types do not remove the need to validate Go API payloads at the boundary. **Under ADR-022, monetary values are validated decimal strings with currencies and must not pass through JS `number` for authoritative computations**; the owning Go service performs financial arithmetic.
 - Add integration tests for user isolation, missing/invalid security context, partial outages, unexpected response data, deadline propagation and disconnected clients.
-- Does not select GraphQL, a mobile BFF, server-side rendering, an HTTP framework, a BFF session-store technology or the exact browser cookie/refresh/logout implementation. BFF-managed browser sessions are accepted in ADR-013.
+- Does not select GraphQL, a mobile BFF, server-side rendering, an HTTP framework or the exact browser cookie/refresh/logout implementation. **ADR-023 selects a dedicated Managed PostgreSQL session database**, while ADR-013 establishes the BFF-managed browser session model.
 
 ## Related decisions
 
@@ -77,3 +77,4 @@ The solid path is the **private browser read-composition and write-forwarding pa
 - [ADR-013: BFF-managed browser authentication](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-022: Exact Money DTO](0022-exact-decimal-money-currency-contract.md)
+- [ADR-023: PostgreSQL BFF sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

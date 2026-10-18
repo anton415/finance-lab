@@ -18,7 +18,7 @@ We compared direct SPA token handling, a token-mediating backend, and a BFF that
 - The Web BFF handles **all private browser API requests, including reads and writes**. It can compose read-only overview responses (ADR-012) and forward authorized mutation requests to the owning Go service, but does **not** own financial transactions or financial business rules.
 - Protect state-changing browser requests against **CSRF** using a validated anti-CSRF scheme and origin checks as appropriate; `SameSite` is defense in depth, not the only protection. Restrict cross-origin access to approved origins and configure credentials deliberately.
 - Each Go domain service continues to **authenticate the security context it receives and enforce resource-level authorization itself** (ADR-006). For user-initiated downstream calls, the BFF uses Keycloak Token Exchange with audience restriction and effective downscoping (ADR-014). Exact client/audience/role mappings are implementation work; never trust a browser-supplied user ID or unsigned identity header.
-- The BFF can run multiple instances without persisting session state in application memory alone. The **server-side session-store technology**, token encryption/rotation policy, logout propagation, MFA policy, back-channel trust and service-to-service delegation still require implementation decisions. Redis or MongoDB are **not implicitly selected** as the session store.
+- The BFF can run multiple instances using its **dedicated Managed PostgreSQL session database, as accepted in ADR-023**, rather than relying on in-process security state. OAuth tokens are encrypted before persistence with separately protected encryption keys; session ID rotation, coordinated refresh, logout propagation, revocation and fail-closed behavior are required. Exact schema, cookie attributes, durations, crypto/key integration and Keycloak back-channel settings still require implementation decisions. **Redis and MongoDB are not the session store**.
 - The public static observability dashboard (ADR-011) remains independently available without a browser session; this decision does not expose private financial resources to anonymous users.
 
 ## Authentication and request flow
@@ -29,7 +29,7 @@ flowchart TD
     G["Traefik<br/>API ingress"]
     BFF["Web BFF<br/>TypeScript + Node.js"]
     KEY["Keycloak<br/>OIDC identity provider"]
-    SESSION[("Private server-side session store<br/>Technology TBD")]
+    SESSION[("Managed PostgreSQL · BFF sessions DB<br/>Encrypted OAuth tokens")]
 
     subgraph DOMAIN["Go domain services<br/>Independent resource authorization"]
         B["Budget"]
@@ -55,7 +55,7 @@ flowchart TD
     class SESSION data;
 ```
 
-**Diagram boundary:** OIDC authorization redirects and callbacks travel through the browser and approved BFF route; the BFF exchanges the authorization code with Keycloak server-to-server. The session cookie is issued in a BFF response routed through Traefik. The session store is conceptual, **not a chosen database technology**. Access to domain APIs is authorized separately by each domain service.
+**Diagram boundary:** OIDC authorization redirects and callbacks travel through the browser and approved BFF route; the BFF exchanges the authorization code with Keycloak server-to-server. The session cookie is issued in a BFF response routed through Traefik. The BFF session store is a **separate Managed PostgreSQL logical database (ADR-023)**, distinct from financial and Keycloak databases. Access to domain APIs is authorized separately by each domain service.
 
 ## Consequences and implementation verification
 
@@ -63,7 +63,7 @@ flowchart TD
 - The BFF becomes critical for private **web** requests but **not** for static website asset delivery or independently authorized native clients.
 - Test: successful/failed login; invalid `state` or code; token/session expiry; logout and session invalidation; CSRF attempts; forbidden CORS origins; session fixation; cross-user access; and Go-service rejection of missing/incorrect audience tokens.
 - Verify browser redirect, cookie and CORS behavior with the **actual chosen domain/origin layout** before accepting the deployment.
-- Select session persistence, BFF HTTP framework, logout mechanics and concrete token-exchange client mappings in follow-up designs. The service-to-service token model is accepted in ADR-014.
+- **Session persistence is selected in ADR-023.** Specify the PostgreSQL schema, encryption/key rotation, session timeouts, CSRF/cookie attributes, BFF HTTP framework, logout integrations and token-exchange client mappings before implementation. The service-to-service token model is accepted in ADR-014.
 
 ## Related decisions
 
@@ -72,3 +72,4 @@ flowchart TD
 - [ADR-010: Independent static SPA](0010-independent-spa-and-api-first-clients.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
+- [ADR-023: PostgreSQL-backed BFF sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

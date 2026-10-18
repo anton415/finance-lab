@@ -38,7 +38,7 @@ flowchart TD
     CLIENT -->|"Private web API + session cookie"| G
     G --> BFF
     BFF <-->|"OIDC token exchange"| IDP
-    BFF -->|"Store sessions + tokens"| STORE[("Server-side session store<br/>Technology TBD")]
+    BFF -->|"Encrypted tokens + sessions"| STORE[("BFF sessions database<br/>Managed PostgreSQL · ADR-023")]
     BFF --> B
     BFF --> P
     BFF --> F
@@ -55,13 +55,13 @@ flowchart TD
     class BFF,B,P,F,A finance;
 ```
 
-Dashed arrows indicate browser OIDC redirects, optional calls or identity verification metadata (e.g., cached signing keys), not required per-request Keycloak calls. The BFF holds OAuth tokens server-side (ADR-013), while the session-store implementation, cookie details and internal trust remain to be specified. The BFF does not replace per-service resource authorization.
+Dashed arrows indicate browser OIDC redirects, optional calls or identity verification metadata (e.g., cached signing keys), not required per-request Keycloak calls. The BFF holds encrypted OAuth tokens in its dedicated Managed PostgreSQL sessions database under ADR-023. Detailed cookie policies, encryption/key implementation and internal trust require verification. The BFF does not replace per-service resource authorization.
 
 ## Security baseline and open implementation details
 
 For browser/native public clients, prefer standards-based **Authorization Code + PKCE** rather than password grant, implicit flow, or transmitting refresh tokens through arbitrary API headers. Where services accept bearer JWTs, verify signature, issuer, audience, expiration and other required claims using maintained libraries and trusted keys; authorization checks remain per-resource and per-operation. Do not expose Keycloak administrative endpoints to the public dashboard.
 
-The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth tokens and Secure/HttpOnly browser session cookies** (ADR-013). Authorization Code + PKCE, CSRF protection, session lifecycle and restricted CORS are accepted security requirements. Service-to-service identity is governed by Token Exchange + Client Credentials in ADR-014. Exact gateway middleware, cookie/CSRF implementation, session storage, refresh/logout, MFA, claims mapping and AI-specific delegated actions remain implementation details.
+The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth tokens and Secure/HttpOnly browser session cookies** (ADR-013). Authorization Code + PKCE, CSRF protection, session lifecycle and restricted CORS are accepted security requirements. Service-to-service identity is governed by Token Exchange + Client Credentials in ADR-014. Exact gateway middleware, cookie/CSRF implementation, **PostgreSQL session-schema/key-management details**, refresh/logout integrations, MFA, claims mapping and AI-specific delegated actions remain implementation details (ADR-023).
 
 ## Consequences
 
@@ -80,3 +80,4 @@ The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth toke
 - [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-018: Keycloak placement and identity database](0018-hybrid-managed-postgresql-k3s-platform-state.md)
+- [ADR-023: BFF session storage and lifecycle](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)

@@ -10,7 +10,7 @@ Finance Lab manages financial records for independent capabilities. Strong trans
 
 ## Decision
 
-Use **PostgreSQL as the primary persistent database**. Apply the **Database-per-Service** pattern: each business service owns its own logical database, database credentials, schema changes and migrations. **ADR-018 places the initial physical PostgreSQL cluster in Yandex Managed PostgreSQL, outside K3s**. It can host separate Budget, Portfolio and FIRE databases **and a distinct Keycloak identity database**, each with appropriately scoped credentials. Managed placement does not guarantee physical high availability.
+Use **PostgreSQL as the primary persistent database**. Apply the **Database-per-Service** pattern: each business service owns its own logical database, database credentials, schema changes and migrations. **ADR-018 places the initial physical PostgreSQL cluster in Yandex Managed PostgreSQL, outside K3s**. It hosts separate Budget, Portfolio and FIRE databases, a distinct Keycloak identity database, and (under **ADR-023**) a **dedicated BFF sessions database for encrypted OAuth tokens and session state**, each with its own credentials and migrations. Managed placement does not guarantee physical high availability.
 
 - **Budget Service** owns its budget records and their persistence contract.
 - **Portfolio Service** owns investment accounts, transactions, positions or valuations defined by its contracts.
@@ -34,23 +34,26 @@ flowchart TD
         PDB[("Portfolio DB")]
         FDB[("FIRE DB<br/>if persistence is needed")]
         KDB[("Keycloak identity DB")]
+        SDB[("BFF sessions DB<br/>Encrypted tokens")]
     end
     KC["Keycloak<br/>Self-hosted in K3s"]
+    BFF["Web BFF<br/>TypeScript · K3s"]
 
     B -->|"Own credentials<br/>Own migrations"| BDB
     P -->|"Own credentials<br/>Own migrations"| PDB
     F -.->|"Only when state is persisted"| FDB
     KC -->|"Own identity credentials"| KDB
+    BFF -->|"Own session credentials"| SDB
 
     classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
     classDef database fill:#E7EFFF,stroke:#466FD1,color:#162B58;
     classDef conditional fill:#FFF1DC,stroke:#B77D20,color:#563908;
-    class B,P,F,KC service;
-    class BDB,PDB,KDB database;
+    class B,P,F,KC,BFF service;
+    class BDB,PDB,KDB,SDB database;
     class FDB conditional;
 ```
 
-The solid arrows show **separately credentialed database access**. Keycloak owns only its identity database; it is not a finance domain service. The dashed FIRE path is conditional on durable FIRE state. Sharing one managed physical PostgreSQL cluster **does not** permit cross-service table access or provide physical fault isolation.
+The solid arrows show **separately credentialed database access**. Keycloak owns only its identity database; the BFF owns only its session database (ADR-023). Neither is a finance domain service. The dashed FIRE path is conditional on durable FIRE state. Sharing one managed physical PostgreSQL cluster **does not** permit cross-service table access or provide physical fault isolation.
 ## Consequences and boundaries
 
 - Local transactional integrity and service ownership are explicit; distributed consistency remains a separate design problem.
@@ -68,3 +71,4 @@ The solid arrows show **separately credentialed database access**. Keycloak owns
 - [ADR-018: Managed PostgreSQL placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
 - [ADR-022: Exact decimal Money and currency contract](0022-exact-decimal-money-currency-contract.md)
+- [ADR-023: Dedicated PostgreSQL BFF sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
