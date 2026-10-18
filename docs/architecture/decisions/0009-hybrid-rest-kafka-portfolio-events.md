@@ -17,7 +17,7 @@ Adopt **hybrid synchronous REST + asynchronous Kafka** communication for Finance
 - A separate **outbox relay** eventually publishes pending integration events to **Kafka**. Kafka or Analytics unavailability must **not prevent a successfully validated Portfolio command from committing**. The event remains pending for later delivery when the broker recovers.
 - A consumer, initially **Python Analytics Service** (ADR-007), can subscribe and refresh or invalidate optional derived calculations. Core Portfolio, Budget and FIRE functionality must remain usable without the Analytics consumer.
 - Treat Kafka delivery as **at least once**, with duplicate publication/consumption possible. Consumers with durable side effects must apply **idempotent processing**, typically using a persisted processed-`event_id` record (inbox/deduplication) in the **same local transaction** as the derived write, where applicable. Do not claim end-to-end exactly-once processing.
-- Keep financial authorization and database ownership with the respective services (ADR-003, ADR-006). Events do not authorize subscribers to access another service's private data.
+- Keep financial authorization and database ownership with the respective services (ADR-003, ADR-006). Events do not authorize subscribers to access another service's private data. A consumer calling a protected API must authenticate with narrowly scoped machine credentials or an explicitly authorized user delegation (ADR-014); user bearer tokens must not be carried in events.
 
 This decision **does not require** all Finance Lab interactions to be events, nor does it turn Kafka into the source of truth for financial balances and transactions. Publishing and subscribing beyond the initial Portfolio workflow require their own defined use cases.
 
@@ -80,5 +80,6 @@ This is a **logical process diagram**, not a final deployment specification. The
 - [ADR-003: PostgreSQL Database-per-Service](0003-postgresql-database-per-service.md)
 - [ADR-006: Keycloak identity and authorization](0006-keycloak-identity-service-authorization.md)
 - [ADR-007: Python Analytics + Rust](0007-python-analytics-rust-library.md)
+- [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [Job4j: Asynchrony and Kafka](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/09-asynchrony-and-events-kafka.md)
 - [Job4j: Transactional outbox and inbox](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/11-outbox-inbox-transaction.md)

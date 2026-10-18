@@ -13,7 +13,7 @@ Finance Lab has independently usable Budget, Portfolio and FIRE services, plus a
 - Adopt **Keycloak** as the **central identity provider**, operated as part of Finance Lab Platform. It authenticates users and issues standards-based OpenID Connect/OAuth 2.0 tokens.
 - Keep **Traefik** as the public API Gateway. It handles routing and can apply coarse edge protections; it is **not** the sole authorization enforcement point.
 - Each financial Go service (Budget, Portfolio, FIRE) verifies the security context presented to its API and makes its **own resource-level authorization decision** using service-owned records. For example, Portfolio Service determines ownership of a portfolio, independently of Budget Service.
-- The AI Agent and Analytics Service must not bypass user authorization when requesting financial data. The accepted Web BFF (ADR-012) also must propagate a verified, appropriately scoped security context to downstream services; credentials, delegation and agent permissions require explicit follow-up design.
+- The AI Agent and Analytics Service must not bypass user authorization when requesting financial data. The accepted Web BFF (ADR-012) uses Keycloak user-token exchange for delegated downstream calls; background workloads use restricted client credentials (ADR-014). AI Agent user delegation and exact approval rules remain separate security design work.
 - No service should take the calling user's ID from an untrusted request body or forwarded header in place of a verified identity.
 - Public read-only endpoints, if introduced, must be explicitly scoped. Publishing sanitized aggregate operational data **does not** grant anonymous access to private budgets, investments, FIRE scenarios, application logs, tracing infrastructure or administrator tools.
 
@@ -61,7 +61,7 @@ Dashed arrows indicate browser OIDC redirects, optional calls or identity verifi
 
 For browser/native public clients, prefer standards-based **Authorization Code + PKCE** rather than password grant, implicit flow, or transmitting refresh tokens through arbitrary API headers. Where services accept bearer JWTs, verify signature, issuer, audience, expiration and other required claims using maintained libraries and trusted keys; authorization checks remain per-resource and per-operation. Do not expose Keycloak administrative endpoints to the public dashboard.
 
-The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth tokens and Secure/HttpOnly browser session cookies** (ADR-013). Authorization Code + PKCE, CSRF protection, session lifecycle and restricted CORS are accepted security requirements. Exact gateway middleware, cookie/CSRF implementation, session storage, refresh/logout behavior, MFA, service-to-service authentication and delegation remain implementation details.
+The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth tokens and Secure/HttpOnly browser session cookies** (ADR-013). Authorization Code + PKCE, CSRF protection, session lifecycle and restricted CORS are accepted security requirements. Service-to-service identity is governed by Token Exchange + Client Credentials in ADR-014. Exact gateway middleware, cookie/CSRF implementation, session storage, refresh/logout, MFA, claims mapping and AI-specific delegated actions remain implementation details.
 
 ## Consequences
 
@@ -78,3 +78,4 @@ The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth toke
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)
+- [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)

@@ -17,7 +17,7 @@ We compared direct SPA token handling, a token-mediating backend, and a BFF that
 - The browser receives a **secure, HttpOnly session cookie** holding only an opaque session reference. Require HTTPS, an appropriate `SameSite` setting, narrow cookie scope, session-ID rotation on authentication and explicit session expiry/termination. The exact cookie/domain settings depend on the deployment and OIDC redirect design.
 - The Web BFF handles **all private browser API requests, including reads and writes**. It can compose read-only overview responses (ADR-012) and forward authorized mutation requests to the owning Go service, but does **not** own financial transactions or financial business rules.
 - Protect state-changing browser requests against **CSRF** using a validated anti-CSRF scheme and origin checks as appropriate; `SameSite` is defense in depth, not the only protection. Restrict cross-origin access to approved origins and configure credentials deliberately.
-- Each Go domain service continues to **authenticate the security context it receives and enforce resource-level authorization itself** (ADR-006). The BFF must pass an appropriately scoped, verified downstream security credential. The exact delegated-token or token-exchange design and audiences are **still open**; never trust a browser-supplied user ID or unsigned identity header.
+- Each Go domain service continues to **authenticate the security context it receives and enforce resource-level authorization itself** (ADR-006). For user-initiated downstream calls, the BFF uses Keycloak Token Exchange with audience restriction and effective downscoping (ADR-014). Exact client/audience/role mappings are implementation work; never trust a browser-supplied user ID or unsigned identity header.
 - The BFF can run multiple instances without persisting session state in application memory alone. The **server-side session-store technology**, token encryption/rotation policy, logout propagation, MFA policy, back-channel trust and service-to-service delegation still require implementation decisions. Redis or MongoDB are **not implicitly selected** as the session store.
 - The public static observability dashboard (ADR-011) remains independently available without a browser session; this decision does not expose private financial resources to anonymous users.
 
@@ -63,7 +63,7 @@ flowchart TD
 - The BFF becomes critical for private **web** requests but **not** for static website asset delivery or independently authorized native clients.
 - Test: successful/failed login; invalid `state` or code; token/session expiry; logout and session invalidation; CSRF attempts; forbidden CORS origins; session fixation; cross-user access; and Go-service rejection of missing/incorrect audience tokens.
 - Verify browser redirect, cookie and CORS behavior with the **actual chosen domain/origin layout** before accepting the deployment.
-- Select session persistence, BFF HTTP framework, logout mechanics and downstream delegation in separate follow-up designs rather than inventing them here.
+- Select session persistence, BFF HTTP framework, logout mechanics and concrete token-exchange client mappings in follow-up designs. The service-to-service token model is accepted in ADR-014.
 
 ## Related decisions
 
@@ -71,3 +71,4 @@ flowchart TD
 - [ADR-006: Keycloak identity and service-owned authorization](0006-keycloak-identity-service-authorization.md)
 - [ADR-010: Independent static SPA](0010-independent-spa-and-api-first-clients.md)
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
+- [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
