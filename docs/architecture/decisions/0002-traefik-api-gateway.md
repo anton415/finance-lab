@@ -12,44 +12,46 @@ Budget, Portfolio, FIRE and AI capabilities must not be routed through or contro
 
 Use **Traefik** as the initial API Gateway / reverse proxy. It is part of the platform rather than a financial domain service. Configure routing to independently deployable service APIs and relevant edge capabilities (for example TLS termination, when deployed). Do not implement the first gateway from scratch in Java or Go.
 
-Financial services retain their own business logic, state and resource-level authorization. Traefik is **not** the authority that decides whether a user owns an individual budget, portfolio or FIRE resource. The identity provider, token/session architecture, gateway authentication policy and any BFF are **not yet selected** by this decision.
+Financial services retain their own business logic, state and resource-level authorization. Traefik is **not** the authority that decides whether a user owns an individual budget, portfolio or FIRE resource. Keycloak identity is accepted in ADR-006, and a separate TypeScript Web BFF for browser-specific API composition is accepted in ADR-012. Exact token/session mechanics and gateway authentication policy remain implementation decisions.
 
-Service-to-service calls are not required to route through the public gateway. Client-specific aggregation can be added as a separate BFF decision if the dashboard requires it. Frontend hosting and future mobile/desktop access are separate architecture decisions.
+Service-to-service calls are not required to route through the public gateway. The accepted TypeScript Web BFF (ADR-012) composes browser-specific responses without taking over domain logic. Static frontend hosting is decided in ADR-010; native client implementations remain future work.
 
 ## Architecture diagram
 
 ```mermaid
 flowchart TD
-    subgraph CLIENTS["Clients"]
-        WEB["Web frontend<br/>TypeScript"]
-        OTHER["Desktop or mobile<br/>(future option)"]
-    end
-    subgraph EDGE["Finance Lab Platform — ingress"]
-        G["Traefik<br/>API Gateway"]
-    end
+    WEB["Web frontend<br/>Static React + TypeScript"]
+    OTHER["Native clients<br/>Future, optional"]
+    G["Traefik<br/>API Gateway"]
+    BFF["Web BFF<br/>TypeScript + Node.js"]
+
     subgraph APIS["Independent service APIs"]
         B["Budget · Go"]
         P["Portfolio · Go"]
         F["FIRE · Go"]
         A["AI Agent · Python"]
+        AN["Analytics · Python + Rust"]
     end
 
     WEB -->|"HTTPS"| G
-    OTHER -.->|"If implemented"| G
-    G --> B
-    G --> P
-    G --> F
-    G --> A
+    G -->|"Web routes"| BFF
+    BFF -->|"Authorized API calls"| B
+    BFF -->|"Authorized API calls"| P
+    BFF -->|"Authorized API calls"| F
+    BFF -.->|"Approved use cases"| A
+    BFF -.->|"Approved use cases"| AN
+    OTHER -.->|"Client API routes"| G
+    G -.->|"Authorized native API access"| P
 
     classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
     classDef ingress fill:#E7EFFF,stroke:#466FD1,color:#162B58;
     classDef service fill:#E5F5EC,stroke:#278254,color:#103B26;
     class WEB,OTHER client;
     class G ingress;
-    class B,P,F,A service;
+    class BFF,B,P,F,A,AN service;
 ```
 
-Solid arrows show **logical ingress routing** to approved service APIs, not unrestricted public exposure. The dashed client is only a future option. Authentication, authorization, frontend hosting and internal service-to-service paths remain separate decisions.
+Solid arrows represent the web-specific logical ingress path; they do not authorize unrestricted public exposure. Dashed arrows are optional, explicitly secured routes. Keycloak identity is addressed in ADR-006; exact session behavior and downstream service identity are still open.
 ## Consequences and boundaries
 
 - Lower custom gateway implementation and maintenance burden for the initial release.
@@ -60,3 +62,4 @@ Solid arrows show **logical ingress routing** to approved service APIs, not unre
 ## References
 
 - [Traefik documentation](https://doc.traefik.io/traefik/)
+- [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)

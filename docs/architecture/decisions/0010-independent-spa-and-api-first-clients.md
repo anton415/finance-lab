@@ -20,7 +20,7 @@ The main alternatives were static Single-Page Application (SPA) hosting with a C
 - Implement the web client as an **API consumer** with explicit loading, failed-request and service-degradation states. When the API is unavailable, the HTML/JS/CSS should still load if the static hosting infrastructure is reachable. The UI must **not** represent missing balances or unavailable service responses as zero.
 - Use **shared, versioned API contracts** usable by the web client and potential future desktop/mobile applications; do not create mandatory backend coupling to the SPA runtime.
 - Treat desktop and mobile clients as **future supported client types**, not required applications for Release 1.
-- Keep user authentication centralized in Keycloak (ADR-006). Browser authentication, sessions/tokens, logout and refresh policies require a separate decision. Configure cross-origin browser access narrowly if frontend and API reside on separate origins.
+- Keep user authentication centralized in Keycloak (ADR-006). A separately deployed TypeScript/Node.js Web BFF handles browser-specific aggregation and is the intended integration point for web sessions (ADR-012). Exact session/token, logout, refresh and CSRF policies still require implementation decisions. Configure cross-origin browser access narrowly if frontend and API reside on separate origins.
 - A public engineering dashboard will use allowlisted, sanitized, periodically published static JSON, as decided in ADR-011. Raw Grafana, Loki, Prometheus, Jaeger and private financial APIs remain inaccessible to anonymous visitors.
 
 ## Architecture diagram
@@ -36,6 +36,7 @@ flowchart TD
     subgraph PLATFORM["Finance Lab Platform"]
         GATEWAY["Traefik<br/>API Gateway"]
         IDP["Keycloak<br/>Identity"]
+        BFF["Web BFF<br/>TypeScript + Node.js"]
     end
 
     subgraph APIS["Independently deployed APIs"]
@@ -49,16 +50,19 @@ flowchart TD
     ORIGIN -->|"Origin assets"| CDN
     CDN -->|"Load SPA assets"| BROWSER
 
-    BROWSER -->|"HTTPS API calls"| GATEWAY
-    BROWSER -->|"OIDC sign-in"| IDP
+    BROWSER -->|"Private web API requests"| GATEWAY
+    BROWSER -.->|"OIDC redirect when needed"| IDP
     FUTURE -.->|"Shared API contracts"| GATEWAY
-    FUTURE -.->|"Identity for native clients"| IDP
+    FUTURE -.->|"Native OIDC flows"| IDP
 
-    GATEWAY --> BUDGET
-    GATEWAY --> PORTFOLIO
-    GATEWAY --> FIRE
-    GATEWAY --> ANALYTICS
-    GATEWAY --> AGENT
+    GATEWAY -->|"Web routes"| BFF
+    BFF -.->|"Identity/session integration TBD"| IDP
+    BFF --> BUDGET
+    BFF --> PORTFOLIO
+    BFF --> FIRE
+    BFF -.-> ANALYTICS
+    BFF -.-> AGENT
+    GATEWAY -.->|"Separate authorized native routes"| PORTFOLIO
 
     classDef client fill:#F3F4F6,stroke:#6B7280,color:#20252C;
     classDef edge fill:#E7EFFF,stroke:#466FD1,color:#162B58;
@@ -67,15 +71,15 @@ flowchart TD
     class ORIGIN,CDN,GATEWAY,IDP edge;
     class BROWSER client;
     class FUTURE future;
-    class BUDGET,PORTFOLIO,FIRE,ANALYTICS,AGENT service;
+    class BFF,BUDGET,PORTFOLIO,FIRE,ANALYTICS,AGENT service;
 ```
 
-Solid arrows represent the Release 1 logical asset and API paths; dashed paths represent **possible future native clients**. The CDN serves public frontend assets, **not authenticated financial data**. The API is called by the browser after the SPA has loaded, not by the CDN.
+Solid arrows show static asset delivery and the Release 1 private Web BFF path; dashed paths represent **optional integrations, pending security details or future native clients**. The CDN serves public frontend assets, **not authenticated financial data**. The browser calls Traefik/BFF after loading the SPA, not the CDN.
 
 ## Failure boundaries and implementation requirements
 
-- **Backend unavailable:** The existing published SPA can still load **if CDN, static origin, DNS and network remain available**; authenticated financial operations fail or degrade explicitly.
-- **Frontend hosting unavailable:** Independent API clients can continue to operate **if gateway, identity provider, backend, network and their dependencies remain available**. A user cannot load a new SPA when its static delivery fails.
+- **Backend or Web BFF unavailable:** The existing published SPA can still load **if CDN, static origin, DNS and network remain available**; authenticated financial operations fail or degrade explicitly.
+- **Frontend hosting unavailable:** The BFF and independent domain APIs can continue to operate **if gateway, identity provider, backend, network and their dependencies remain available**. A user cannot load a new SPA when its static delivery fails.
 - **Identity provider unavailable:** Public static assets may load, but sign-in and some authenticated requests can be unavailable.
 - **Same cloud provider:** Separate deployments reduce direct application coupling but **do not guarantee independent regional/provider availability**.
 - **Deployment details:** Use versioned immutable assets and a safe SPA HTML fallback, limit CORS to approved client origins, ensure correct TLS policies, and avoid shipping secrets or sensitive financial data in static assets. Browser token storage and cross-origin cookie behavior must be resolved with ADR-006 before deployment.
@@ -86,7 +90,7 @@ Solid arrows represent the Release 1 logical asset and API paths; dashed paths r
 - Eliminates the requirement to run a web application server merely to serve the existing React SPA.
 - Supports independent deployment and failure isolation between static assets and financial APIs, with explicit availability limits.
 - Introduces CDN/origin configuration, CORS, client/API compatibility and client-side degraded-state handling.
-- Does **not** select SSR, a BFF, native mobile/desktop frameworks, offline persistence or an exact production DNS/cookie architecture. Public metrics exposure is governed by ADR-011; detailed operational access remains implementation work.
+- Does **not** select SSR, a specific BFF framework, native mobile/desktop frameworks, offline persistence or an exact production DNS/cookie architecture. The TypeScript Web BFF is accepted in ADR-012; public metrics exposure is governed by ADR-011.
 
 ## Related decisions
 
@@ -95,3 +99,4 @@ Solid arrows represent the Release 1 logical asset and API paths; dashed paths r
 - [ADR-006: Keycloak identity](0006-keycloak-identity-service-authorization.md)
 - [ADR-007: Python Analytics and Rust library](0007-python-analytics-rust-library.md)
 - [ADR-011: Public sanitized observability dashboard](0011-public-sanitized-observability-dashboard.md)
+- [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
