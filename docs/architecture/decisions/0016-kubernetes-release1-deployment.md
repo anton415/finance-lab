@@ -8,13 +8,13 @@
 
 The Finance Lab Release 1 architecture includes independently deployable Go domain services (ADR-004), TypeScript/Node.js Web BFF (ADR-012), Python Analytics and AI Agent services (ADRs 004 and 007), Traefik (ADR-002) and multiple stateful dependencies. Docker Compose would be a simpler initial deployment, but the user **explicitly prefers Kubernetes in Release 1** for hands-on orchestration and platform-engineering practice despite increased cost and implementation work.
 
-Yandex Cloud remains the planned deployment environment. Its managed Kubernetes service charges for the control plane and worker resources separately; a self-managed Kubernetes distribution trades infrastructure costs for operational responsibility. No measured cost estimate or final cluster topology has been approved.
+Yandex Cloud remains the planned deployment environment. Its managed Kubernetes service charges for the control plane and worker resources separately; a self-managed Kubernetes distribution trades infrastructure costs for operational responsibility. **ADR-017 now selects self-managed K3s on Yandex Cloud VM(s) for Release 1, followed by a temporary Yandex Managed Kubernetes evaluation in early 2027.** No measured cost estimate or final node sizing has been approved.
 
 ## Decision
 
 **Release 1 (target: December 31, 2026)**
 
-- Use **Kubernetes as the deployment/orchestration platform for containerized Finance Lab backend application workloads** in the Yandex Cloud target environment. This is a **Release 1 requirement**, not a deferred 2027 upgrade.
+- Use **Kubernetes as the deployment/orchestration platform for containerized Finance Lab backend application workloads** in the Yandex Cloud target environment. The accepted **Release 1 distribution is self-managed K3s on Yandex Cloud VM infrastructure** (ADR-017), not a deferred 2027 upgrade. Yandex Managed Kubernetes is planned as a temporary **comparative evaluation in early 2027**, not as an always-on second production cluster.
 - Run **Traefik as the cluster's API ingress/gateway component**, routing explicitly approved external API requests to the Web BFF and other approved services (ADR-002). Keep the Go Budget, Portfolio and FIRE services, TypeScript Web BFF and Python AI Agent/Analytics as **separately deployable Kubernetes workloads**; do not combine their runtimes or business ownership.
 - Continue to serve the **static React/TypeScript SPA from Yandex Object Storage + Cloud CDN**, outside the Kubernetes backend runtime (ADR-010). Likewise, the public observability dashboard uses prepublished static sanitized JSON (ADR-011), not live private metrics.
 - Build **versioned OCI container images** and maintain **declarative Kubernetes deployment configuration**. For normally stateless HTTP workloads use `Deployment` and `Service` resources with suitable readiness, liveness and (where justified) startup probes, resource requests/limits and controlled rollout/rollback. Deploy service updates independently and verify that one service can be restarted without unnecessarily redeploying another.
@@ -33,7 +33,7 @@ flowchart TD
     REG["OCI container registry<br/>Versioned images"]
 
     subgraph CLOUD["Yandex Cloud target environment"]
-        subgraph K8S["Kubernetes cluster<br/>Managed vs self-managed TBD"]
+        subgraph K8S["Kubernetes cluster<br/>K3s on Yandex Cloud VM(s) · Release 1"]
             EDGE["Traefik<br/>Gateway/Ingress"]
             BFF["Web BFF Deployment<br/>TypeScript + Node.js"]
             B["Budget Deployment<br/>Go"]
@@ -85,7 +85,7 @@ The diagram shows **logical application deployment and API paths**, not approved
 ## Consequences and deferred choices
 
 - Adds substantial Kubernetes, networking, provisioning, monitoring and security work to the 2026 deadline. Scope should prioritize **one functioning end-to-end deployment** over advanced orchestration features.
-- Select **Yandex Managed Kubernetes vs self-managed K3s (or another conformant distribution)** in a separate cost/operations decision. The cluster's worker count, regions/zones, precise infrastructure-as-code and CI/CD/GitOps mechanism are not chosen here.
+- **ADR-017 accepts K3s first and a temporary Yandex Managed Kubernetes comparison in early 2027.** The cluster's worker count, VM sizing, regions/zones, cost ceiling, precise infrastructure-as-code and CI/CD/GitOps mechanism remain unselected. The eventual production cluster after comparison must be chosen from measured evidence and an approved migration plan.
 - **Traefik provider/routing API** (Kubernetes Ingress vs Gateway API), CNI/network policy behavior, ingress load balancer/DNS/TLS details and secret-management implementation remain configuration decisions.
 - Stateful workload location (managed/external or in-cluster), backup/restore, persistent-volume design, message-broker topology and session-store technology remain open.
 - The 2027 release can pursue additional reliability or scaling capabilities, but **the initial use of Kubernetes is not postponed**.
@@ -100,3 +100,4 @@ The diagram shows **logical application deployment and API paths**, not approved
 - [ADR-003: PostgreSQL database-per-service](0003-postgresql-database-per-service.md)
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-010: Static SPA and independent APIs](0010-independent-spa-and-api-first-clients.md)
+- [ADR-017: K3s-first and managed Kubernetes comparison](0017-k3s-first-managed-kubernetes-comparison.md)
