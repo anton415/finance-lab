@@ -62,7 +62,7 @@ The highlighted Rust box is an **in-process library**, not a separate service or
 
 - Gains Rust programming and numerical-performance experience without a fourth financial domain service or separate Rust deployment in 2026.
 - The Python Analytics Service owns the library build, packaging, compatibility, observability and error boundaries.
-- Financial data remains owned by existing domain services. Analytics persistence, caching, Redis, MongoDB and specific report storage contracts are **not selected by this ADR**.
+- Financial data remains owned by existing Go domain services. **ADR-015** now defines Analytics-owned Redis caching of expensive simulations and MongoDB persistence of explicitly saved, versioned analysis reports. Neither store is the source of financial records; exact schema, TTL, operational and security implementation details remain separate work.
 - Scope a single simulation use case for 2026; do not imply broad production-grade investment advice or formally validated retirement probabilities.
 
 ## References
@@ -70,3 +70,4 @@ The highlighted Rust box is an **in-process library**, not a separate service or
 - [PyO3 User Guide](https://pyo3.rs/main/)
 - [ADR-004: Independent polyglot services](0004-independent-polyglot-services.md)
 - [ADR-003: PostgreSQL Database-per-Service](0003-postgresql-database-per-service.md)
+- [ADR-015: Redis simulation cache and MongoDB saved reports](0015-analytics-redis-cache-mongodb-reports.md)
