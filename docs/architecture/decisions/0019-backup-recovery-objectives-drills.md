@@ -91,7 +91,7 @@ The flow represents **backup sources and controlled recovery**, not live replica
 - Establishes measurable operational recovery work for 2026 without the cost or complexity of a second always-on production cluster.
 - Off-cluster backups protect against some single-VM disasters but **do not guarantee independence from a full Yandex Cloud/provider or regional outage**. A geographically separate restore site and tested off-provider copies are possible future additions.
 - Final backup tooling, encryption/retention configuration, storage costs, IAM/KMS policies, concrete managed PostgreSQL host settings, Kubernetes datastore choice and procedures require implementation decisions.
-- **A local development/test or potential independent failover site is not selected by this ADR**. Active/passive cross-site replication, promotion/fencing, automatic DNS/traffic failover and split-brain prevention require a separate architectural decision before use with private real data.
+- **ADR-020 accepts an isolated local K3s environment for synthetic testing**, potentially also useful for controlled recovery rehearsals. It does **not** accept an active production standby, replication, or automatic Yandex/local failover. Promotion, fencing, traffic switching and split-brain prevention require a separate decision before use with real private data.
 - The early-2027 temporary managed-cluster comparison (ADR-017) must not concurrently write to the live financial database.
 
 ## Related decisions
@@ -103,3 +103,4 @@ The flow represents **backup sources and controlled recovery**, not live replica
 - [ADR-016: Kubernetes Release 1](0016-kubernetes-release1-deployment.md)
 - [ADR-017: K3s then managed Kubernetes comparison](0017-k3s-first-managed-kubernetes-comparison.md)
 - [ADR-018: Hybrid managed/stateful placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
+- [ADR-020: Local staging and reliability experiments](0020-local-staging-automated-reliability-tests.md)

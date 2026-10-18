@@ -17,7 +17,7 @@ Sharing Grafana or exposing Prometheus/Loki/Jaeger directly would increase both 
 - Add a private **metrics export/sanitization process** with a strict **allowlist** of approved metric names and output fields. Query private observability data, aggregate/validate results, and **periodically publish a small static JSON snapshot** to an Object Storage path served through Cloud CDN. The exporter requires write access; anonymous clients receive only published read-only JSON.
 - **Initial 2026 public scope:** coarse service availability, response-latency summaries (including p95 where enough samples exist) and error-rate summaries. Use **synthetic monitoring/probe traffic or other explicitly reviewed non-user-sensitive measurements** as the default source. When real-user traffic is sparse, do not publish live request volume or fine-grained metrics that could reveal personal usage.
 - Show measurement **window, source/provenance, last-updated time and a visible stale/unavailable state**. If export fails, preserve accurate staleness information; never present an old successful measurement as fresh current availability.
-- Optional future public information (Kafka processing delay, deployment history, architectural views and richer metrics) requires a separate privacy/security review of each field or dataset.
+- Optional future public information (Kafka processing delay, deployment history, architectural views and richer metrics) requires a separate privacy/security review of each field or dataset. **ADR-020 permits manually reviewed, sanitized synthetic-staging experiment reports** as portfolio evidence; raw attack results, credentials, private data and internal topology must not be published automatically.
 - If the public app demonstrates financial workflows, use **clearly marked synthetic demonstration data**, never real account balances or private user information.
 
 The public metrics export is **not** a user-facing financial API, identity provider, business orchestrator or database. This decision does not authorize publishing internal service addresses, sensitive build/deployment details or customer telemetry.
@@ -78,3 +78,4 @@ flowchart TD
 - [ADR-001: ShareTrip-derived observability baseline](0001-observability-baseline.md)
 - [ADR-010: Independently hosted SPA and API-first clients](0010-independent-spa-and-api-first-clients.md)
 - [ADR-006: Keycloak identity and service-owned authorization](0006-keycloak-identity-service-authorization.md)
+- [ADR-020: Local automated reliability lab](0020-local-staging-automated-reliability-tests.md)

@@ -25,7 +25,7 @@ Running every database and broker inside a potentially single-node learning clus
 
 PostgreSQL remains **one managed physical cluster initially**, with distinct logical databases, service roles and migrations for the Go domains and a separate Keycloak identity database. **Logical separation does not imply physical high availability**: one managed PostgreSQL host can still be a single point of failure. Do not claim HA or zero data loss solely because the offering is managed.
 
-The K3s cluster hosts containerized business services, BFF, Python services and Traefik under ADR-016 in addition to the supporting infrastructure above. **The static React frontend stays outside K3s** in Object Storage + Cloud CDN (ADR-010); the public dashboard receives only sanitized static metrics exports (ADR-011).
+The **production** K3s cluster hosts containerized business services, BFF, Python services and Traefik under ADR-016 in addition to the supporting infrastructure above. **ADR-020's local staging is isolated, uses synthetic data and has its own testing databases and credentials**, not production stateful backends. **The static React frontend stays outside K3s** in Object Storage + Cloud CDN (ADR-010); the public dashboard receives only sanitized static metrics exports (ADR-011).
 
 ### Storage, security and failure boundaries
 
@@ -108,3 +108,4 @@ This is a **logical placement diagram**, not a final network map, storage topolo
 - [ADR-016: Kubernetes deployment](0016-kubernetes-release1-deployment.md)
 - [ADR-017: K3s-first rollout](0017-k3s-first-managed-kubernetes-comparison.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-020: Local staging and simulated testing](0020-local-staging-automated-reliability-tests.md)

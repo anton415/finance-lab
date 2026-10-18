@@ -21,7 +21,7 @@ Yandex Cloud remains the planned deployment environment. Its managed Kubernetes 
 - Treat Kubernetes as a shared infrastructure failure domain: **Kubernetes does not by itself guarantee high availability, zero downtime, multi-zone resilience, backup recovery or fault isolation at the node/cluster level**. Those require separately specified capacity, node counts, topology and tests.
 - Require explicit security configuration for HTTPS/API exposure, workload/service accounts and minimal RBAC, namespace and network isolation where supported, restricted secret delivery, secure internal service transport and observability (ADRs 001, 006, 013, 014). Do not store financial credentials in plain Kubernetes manifests or container images.
 - Preserve domain database ownership from ADR-003. **ADR-018 now places PostgreSQL in Yandex Managed PostgreSQL outside K3s**, with separate Go-domain and Keycloak logical databases; **Kafka, Keycloak, Redis, MongoDB and private observability run inside K3s**. Exact broker/storage/backup details remain implementation decisions; a `StatefulSet` alone does not solve durability.
-- Docker Compose, kind or k3d **may be used as local development/test conveniences**, but Docker Compose is **not** the target cloud deployment platform for Release 1.
+- Docker Compose, kind or k3d **may be used as local development/test conveniences**, but Docker Compose is **not** the target cloud deployment platform for Release 1. **ADR-020 adds isolated local K3s staging**, not a production replica; synthetic user, load and security testing should not target production by default.
 
 ## Architecture diagram
 
@@ -113,3 +113,4 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 - [ADR-017: K3s-first and managed Kubernetes comparison](0017-k3s-first-managed-kubernetes-comparison.md)
 - [ADR-018: Managed PostgreSQL and self-hosted platform state](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-020: Local staging and automated reliability testing](0020-local-staging-automated-reliability-tests.md)

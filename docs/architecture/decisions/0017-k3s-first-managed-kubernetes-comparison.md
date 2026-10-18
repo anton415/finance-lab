@@ -59,7 +59,7 @@ flowchart TD
     class TEMP,DECIDE,MOVE future;
 ```
 
-**The two clusters are sequential stages, not an active-active design.** The managed cluster is a time-bounded test. ADR-018 chooses Release 1 component placement; **cross-cluster data copies, persistent-volume migration and cutover mechanics remain unapproved**.
+**The two clusters are sequential stages, not an active-active design.** The managed cluster is a time-bounded test. **ADR-020 separately selects local K3s as a synthetic-data staging environment**, not a permanent standby or production replica. ADR-018 chooses Release 1 component placement; **cross-cluster data copies, persistent-volume migration and cutover mechanics remain unapproved**.
 
 ## Required verification and risks
 
@@ -79,3 +79,4 @@ flowchart TD
 - [ADR-010: Independently hosted SPA](0010-independent-spa-and-api-first-clients.md)
 - [ADR-018: Stateful infrastructure placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-020: Local staging and automated reliability testing](0020-local-staging-automated-reliability-tests.md)
