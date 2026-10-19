@@ -71,7 +71,7 @@ The diagram shows **two independent security flows**; it does **not** imply that
 - Centralizes identity issuance while preserving service-specific authorization and independent data ownership.
 - Distinguishes human authority from machine authority and reduces blast radius through per-audience/per-service credentials.
 - Adds Keycloak client configuration, exchange policy tests, protected secret management and token lifecycle behavior.
-- Concrete scopes/roles, service account inventory, outbound mTLS, workload identity alternatives, token caching and any **AI Agent on-behalf-of delegation or approval rules** remain separate implementation/security design work. Do not infer unrestricted agent powers from this ADR.
+- Concrete scopes/roles, service account inventory, outbound mTLS, workload identity alternatives and token caching remain implementation/security work. **ADR-026 now accepts the product AI rule: read-only user-scoped tools by default, with exact human-confirmed financial writes through the normal BFF and owning domain API.** Detailed AI on-behalf-of scopes, approval binding and consent implementation are still pending; never infer unrestricted agent rights.
 
 ## References
 
@@ -81,3 +81,4 @@ The diagram shows **two independent security flows**; it does **not** imply that
 - [ADR-006: Identity and resource authorization](0006-keycloak-identity-service-authorization.md)
 - [ADR-009: REST + Kafka](0009-hybrid-rest-kafka-portfolio-events.md)
 - [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)
+- [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)

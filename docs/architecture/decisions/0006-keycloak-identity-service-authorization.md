@@ -13,7 +13,7 @@ Finance Lab has independently usable Budget, Portfolio and FIRE services, plus a
 - Adopt **Keycloak** as the **central identity provider**, operated as part of Finance Lab Platform. It authenticates users and issues standards-based OpenID Connect/OAuth 2.0 tokens. **ADR-018 hosts the Keycloak workload in K3s and its dedicated identity database in Yandex Managed PostgreSQL**, using credentials separate from the financial databases.
 - Keep **Traefik** as the public API Gateway. It handles routing and can apply coarse edge protections; it is **not** the sole authorization enforcement point.
 - Each financial Go service (Budget, Portfolio, FIRE) verifies the security context presented to its API and makes its **own resource-level authorization decision** using service-owned records. For example, Portfolio Service determines ownership of a portfolio, independently of Budget Service.
-- The AI Agent and Analytics Service must not bypass user authorization when requesting financial data. The accepted Web BFF (ADR-012) uses Keycloak user-token exchange for delegated downstream calls; background workloads use restricted client credentials (ADR-014). AI Agent user delegation and exact approval rules remain separate security design work.
+- The AI Agent and Analytics Service must not bypass user authorization when requesting financial data. The accepted Web BFF (ADR-012) uses Keycloak user-token exchange for delegated downstream calls; background workloads use restricted client credentials (ADR-014). **ADR-026 accepts a separate product AI permission/approval policy: narrowly delegated read-only tools by default; only a fresh human-confirmed ordinary BFF/Go command can modify financial records.** Exact agent client scopes and consent implementation remain follow-up work.
 - No service should take the calling user's ID from an untrusted request body or forwarded header in place of a verified identity.
 - Public read-only endpoints, if introduced, must be explicitly scoped. Publishing sanitized aggregate operational data **does not** grant anonymous access to private budgets, investments, FIRE scenarios, application logs, tracing infrastructure or administrator tools.
 
@@ -81,3 +81,4 @@ The web client uses a TypeScript Web BFF (ADR-012) with **server-side OAuth toke
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-018: Keycloak placement and identity database](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-023: BFF session storage and lifecycle](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
+- [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)

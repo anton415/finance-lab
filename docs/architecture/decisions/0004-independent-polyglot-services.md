@@ -17,7 +17,7 @@ Finance Lab must allow users to use budgeting, investments and FIRE tracking ind
 | Budget Service | Go |
 | Portfolio Service | Go |
 | FIRE Service | Go |
-| AI Agent Service | Python (existing `finance-lab-agent`) |
+| AI Agent Service | Python (existing `finance-lab-agent`); **read-only by default with trusted tool execution and human-approved financial writes (ADR-026)** |
 | Analytics Service | Python with an in-process Rust library (see ADR-007) |
 | Identity provider | Keycloak (see ADR-006) |
 | Primary persistence | SQL with PostgreSQL (see ADR-003) |
@@ -91,3 +91,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-021: GitHub Organization and GitOps](0021-github-organization-actions-argocd-gitops.md)
 - [ADR-022: Exact decimal Money contracts](0022-exact-decimal-money-currency-contract.md)
 - [ADR-024: Contract-first REST APIs](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)

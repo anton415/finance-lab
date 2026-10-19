@@ -26,7 +26,7 @@ The local Linux workstation is proposed for **testing**, not for production fail
 2. **Incremental load — Grafana k6.** Apply bounded, stepped staging load with explicit duration, concurrency, request-rate limits, abort thresholds and approved target endpoints. Measure throughput, p50/p95 latency, error rates, CPU/memory/IO pressure, database behavior and bottlenecks.
 3. **Authorized security regression — OWASP ZAP and scripted checks.** Start with passive/baseline scans and limited, explicitly reviewed active tests **only on allowlisted, owned staging endpoints**. Exercise invalid or expired tokens, authorization boundaries, CSRF and input validation. Do not run destructive, uncontrolled or intrusive scans against production.
 
-The AI coordinator can propose scenarios, choose from approved test plans, summarize traces and metrics and recommend fixes. **Executable test jobs remain deterministic, reviewable, target-allowlisted and bounded.** No agent receives unrestricted attack privileges, real production secrets or independent permission to raise testing limits. Human review is required for new invasive or disruptive scenarios.
+The **staging-only AI test coordinator** can propose scenarios, choose from approved test plans, summarize traces and metrics and recommend fixes. **Executable test jobs remain deterministic, reviewable, target-allowlisted and bounded.** No agent receives unrestricted attack privileges, real production secrets or independent permission to raise testing limits. Human review is required for new invasive or disruptive scenarios. **These test bots are distinct from the user-facing financial AI Agent governed by ADR-026**; testing approval does not authorize production financial writes.
 
 **Production testing is restricted** to separately approved low-rate, non-destructive smoke/health probes; no high-load simulation or active penetration scanning is authorized for the live service by this ADR.
 
@@ -107,6 +107,7 @@ flowchart TD
 - [ADR-021: GitHub Actions and Argo CD pipeline](0021-github-organization-actions-argocd-gitops.md)
 - [ADR-022: Exact decimal Money and currencies](0022-exact-decimal-money-currency-contract.md)
 - [ADR-024: API contract verification](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
 
 ## Technical references
 
