@@ -81,7 +81,7 @@ This is a **future logical workflow**, not an assertion that the organization, m
 ## Migration and implementation verification
 
 - Create the organization only after selecting a unique slug and explicit approval; inventory source repositories, open PRs/issues, GitHub Projects, workflow secrets, deployment keys, registries and external references before transferring them. Verify actions, branch rules, collaborator rights, old links and connected-app permissions afterward.
-- Start by retaining and extending existing GitHub Actions. Each future repository must document its relevant checks and truthfully report observed results, aligned with existing `AGENTS.md`.
+- Start by retaining and extending existing GitHub Actions. Each future repository must document its relevant checks and truthfully report observed results, aligned with existing `AGENTS.md`. Under **ADR-025**, validate Portfolio-owned CloudEvents/JSON Schema files, synthetic event fixtures, and Portfolio–Analytics consumer compatibility **separately from REST OpenAPI checks**.
 - Test image-digest promotion, isolated local staging, Argo CD sync/rollback and a gated production deployment; do not present unexecuted integration/CI work as complete.
 - Argo CD, runner and stateful-cluster resource overhead must be included in K3s sizing. A production promotion must remain manually controlled even if staging reconciliation is automatic.
 - Exact GitHub organization slug, repository transfer schedule, self-hosted versus hosted runners, OCI registry choice, GitOps layouts, credentials, protection features and costs remain implementation decisions.
@@ -93,6 +93,7 @@ This is a **future logical workflow**, not an assertion that the organization, m
 - [ADR-016: K3s container orchestration](0016-kubernetes-release1-deployment.md)
 - [ADR-020: Local staging and automated testing](0020-local-staging-automated-reliability-tests.md)
 - [ADR-024: Service-owned OpenAPI governance](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 
 ## References
 

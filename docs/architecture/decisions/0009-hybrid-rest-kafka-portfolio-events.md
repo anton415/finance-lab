@@ -19,7 +19,7 @@ Adopt **hybrid synchronous REST + asynchronous Kafka** communication for Finance
 - Treat Kafka delivery as **at least once**, with duplicate publication/consumption possible. Consumers with durable side effects must apply **idempotent processing**, typically using a persisted processed-`event_id` record (inbox/deduplication) in the **same local transaction** as the derived write, where applicable. Do not claim end-to-end exactly-once processing.
 - Keep financial authorization and database ownership with the respective services (ADR-003, ADR-006). Events do not authorize subscribers to access another service's private data. A consumer calling a protected API must authenticate with narrowly scoped machine credentials or an explicitly authorized user delegation (ADR-014); user bearer tokens must not be carried in events.
 
-This decision **does not require** all Finance Lab interactions to be events, nor does it turn Kafka into the source of truth for financial balances and transactions. Publishing and subscribing beyond the initial Portfolio workflow require their own defined use cases.
+**ADR-025 now specifies the initial event**: `PortfolioChanged` (`finance-lab.portfolio.changed.v1`) on `portfolio.events.v1`, partitioned by `portfolio_id`, using CloudEvents 1.0 structured JSON and producer-owned JSON Schema without a Schema Registry for Release 1. This decision **does not require** all Finance Lab interactions to be events, nor does Kafka become authoritative for financial balances and transactions. Other event workflows require their own use cases.
 
 ## Architecture diagram
 
@@ -36,7 +36,7 @@ flowchart TD
         DB -->|"Read pending outbox events"| RELAY
     end
 
-    KAFKA[("Kafka<br/>Durable integration events")]
+    KAFKA[("Kafka · portfolio.events.v1<br/>CloudEvents structured JSON")]
 
     subgraph ANALYTICS["Analytics Service - Python"]
         CONSUMER["Event consumer<br/>Duplicate-safe processing"]
@@ -61,9 +61,9 @@ This is a **logical process diagram**, not a final deployment specification. The
 
 ## Required design and verification before implementation
 
-1. Define the **first Portfolio event** and its business semantics, schema/version, owner, publication trigger, topic and partition key (e.g., ordered by portfolio/account where necessary). **ADR-024's OpenAPI 3.1 REST versioning does not select Kafka schema formats, topic conventions or compatibility policies.** Do not prematurely equate every purchase with an immediately recalculated valuation.
+1. **Implement the PortfolioChanged v1 contract selected in ADR-025**, including the producer-owned JSON Schema, topic `portfolio.events.v1`, partition key `portfolio_id`, monotonically increasing source revision and real mutation trigger. Do not equate successful portfolio commits with immediately recalculated valuations. REST OpenAPI versions are governed separately by ADR-024.
 2. Include stable `event_id`, `event_type`, `occurred_at`, schema version and appropriate `correlation_id`, `causation_id` and trace propagation, based on ShareTrip observability lessons (ADR-001). **When an event carries money, use versioned exact decimal strings and explicit currency (ADR-022), not floating-point JSON numbers.** Keep payloads minimal and avoid leaking sensitive financial data or user identities into logs and public dashboards.
-3. Specify producer retries, outbox recovery, consumer idempotency, replay, error handling and poison-message policy. Exact retry limits, dead-letter behavior, broker security and operational topology require implementation-level design.
+3. Enforce ADR-025's per-portfolio ordered publication, stable event IDs, at-least-once delivery, idempotent consumption, bounded retries, private poison-message handling and **periodic reconciliation for lost latest events**. Exact retry limits, dead-letter mechanisms, broker security and operational topology require implementation-level design.
 4. Test failure after database commit but before Kafka publication, Kafka downtime, duplicate delivery, consumer downtime and eventual catch-up. Assert that committed financial records remain correct and independent of Analytics availability.
 5. Monitor outbox backlog, publish failures, consumer lag and end-to-end event-processing delay; connect traces/logs via correlation context. Observability must never be required for a financial command to succeed.
 
@@ -86,5 +86,6 @@ This is a **logical process diagram**, not a final deployment specification. The
 - [ADR-015: Analytics Redis cache and MongoDB saved reports](0015-analytics-redis-cache-mongodb-reports.md)
 - [ADR-022: Versioned money event values](0022-exact-decimal-money-currency-contract.md)
 - [ADR-024: OpenAPI for REST, independent from events](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 - [Job4j: Asynchrony and Kafka](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/09-asynchrony-and-events-kafka.md)
 - [Job4j: Transactional outbox and inbox](https://github.com/anton415/job4j_senior_lessons/blob/main/modules/4.9.3-go-sharetrip-in-microservices/11-outbox-inbox-transaction.md)

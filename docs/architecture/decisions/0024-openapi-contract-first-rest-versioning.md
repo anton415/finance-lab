@@ -37,7 +37,7 @@ The existing budget backup **V2 document contract** and Java/Spring T2 concurren
 
 - Use **GitHub Actions** (ADR-021) to lint/validate service OpenAPI definitions, check changes against the **last released contract**, run provider/API conformance and compile/test affected TypeScript/Python clients. Static/schema checks are not proof of semantic compatibility; human review remains required.
 - Test representative **Budget and Portfolio `v1` contracts first**: authorized/unauthorized requests, standard problems, exact Money serialization, and client compatibility. Exercise changed contracts in isolated staging (ADR-020) before production promotion. Expand to FIRE/Analytics once their endpoints exist.
-- Kafka event schemas are **not OpenAPI REST contracts**. Schema format, topic policies, compatibility rules and first concrete Portfolio event remain decisions under ADR-009 and its follow-up. Monetary event payloads still obey ADR-022. Do not expose confidential internal API definitions publicly by default.
+- Kafka event schemas are **not OpenAPI REST contracts**. **ADR-025 separately accepts CloudEvents 1.0 structured JSON, producer-owned JSON Schema and `PortfolioChanged` on `portfolio.events.v1`**. Schema evolution and event consumer checks remain separate from REST major versions. Future monetary event payloads still obey ADR-022. Do not expose confidential internal API definitions publicly by default.
 
 ## Architecture diagram
 
@@ -89,6 +89,7 @@ This is a **target contract workflow**, not proof of an existing Go v1 API, publ
 - [ADR-020: Staging experiments](0020-local-staging-automated-reliability-tests.md)
 - [ADR-021: GitHub Actions CI](0021-github-organization-actions-argocd-gitops.md)
 - [ADR-022: Money representation](0022-exact-decimal-money-currency-contract.md)
+- [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 - [Existing V2 budget backup contract](../../budget-backup-contract.md)
 - [Existing T2 budget design](../../t2/design.md)
 - [OpenAPI 3.1 specification](https://spec.openapis.org/oas/v3.1.1.html)
