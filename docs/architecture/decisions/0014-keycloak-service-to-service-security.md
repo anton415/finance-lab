@@ -19,7 +19,7 @@ Use **Keycloak as the token issuer** for two distinct types of service-to-servic
 
 **Keycloak standard token exchange V2** is the preferred first-release implementation for first-party clients in the same realm. The requesting client must be confidential and configured for standard token exchange; Keycloak's audience and scope mappings must be validated against the actual token. **Keycloak's standard exchange can expand scopes under some configurations**, so enforce genuine **downscoping / no privilege escalation** using the appropriate client policy (such as a downscope assertion grant enforcer), strict client scopes and tests. Request a single necessary resource audience where possible.
 
-Confine application and identity traffic to authenticated **TLS-protected channels**, keep backend APIs off the public network except explicitly approved routes, protect service credentials via controlled secret delivery and rotation, and never log bearer tokens or client secrets. **mTLS is an optional future hardening measure**, not a prerequisite for this ADR.
+Confine application and identity traffic to authenticated **TLS-protected channels**, keep backend APIs off the public network except explicitly approved routes, protect service credentials via controlled secret delivery and rotation, and never log bearer tokens or client secrets. **ADR-027 selects Yandex Lockbox and ESO for production credential delivery**, with isolated workload identities and protected bootstrap. **mTLS is an optional future hardening measure**, not a prerequisite for this ADR.
 
 Kafka event delivery (ADR-009) is **not** an authorization credential: do not put user access tokens into event payloads or headers. Consumers validate event source/trust/schema; if they later call private APIs, obtain purpose-limited service credentials or a properly designed user delegation rather than inheriting arbitrary user rights.
 
@@ -82,3 +82,4 @@ The diagram shows **two independent security flows**; it does **not** imply that
 - [ADR-009: REST + Kafka](0009-hybrid-rest-kafka-portfolio-events.md)
 - [ADR-013: BFF-managed browser sessions](0013-keycloak-bff-managed-browser-sessions.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)

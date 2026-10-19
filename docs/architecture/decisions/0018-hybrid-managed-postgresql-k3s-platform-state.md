@@ -94,7 +94,7 @@ This is a **logical placement diagram**, not a final network map, storage topolo
 - Record a **cost estimate and approved spending ceiling** for Managed PostgreSQL, K3s VMs, persistent disks, load balancing, backups and network traffic; test whether the full stack fits its proposed hardware before leaving it running continuously.
 - Verify PostgreSQL logical database/user isolation, TLS/private routing and recoverability of both financial and Keycloak state.
 - Verify Kafka outage/restart and duplicate replay, persistent MongoDB reports and restoration, Redis cache loss, Keycloak restart, and observability outage without corrupting the authoritative financial records.
-- Configure resource requests/limits, storage monitoring, appropriate probes and recovery runbooks for the in-cluster dependencies. Keep production secrets in approved protected delivery mechanisms, not committed manifests.
+- Configure resource requests/limits, storage monitoring, appropriate probes and recovery runbooks for the in-cluster dependencies. Under **ADR-027**, production secrets originate in Yandex Lockbox, are materialized through restricted ESO into encrypted K3s Secrets, and are accessible only by approved consumers. Keep secret values out of committed manifests, images and CI artifacts.
 - The managed PostgreSQL service reduces some database operations but does **not** eliminate backup validation, database maintenance planning, region/provider dependency or single-host failure risk.
 - Specific Managed PostgreSQL host configuration/HA tier, Kafka broker topology, persistent-storage class, backup tooling/retention, Keycloak upgrade process, exact observability collectors, K3s VM sizing and **BFF session-store implementation details (ADR-023)** remain follow-up decisions.
 - The early-2027 temporary Managed Kubernetes evaluation (ADR-017) must use a **separate test data environment** or an approved migration plan; it must not become a second uncontrolled writer to production PostgreSQL.
@@ -112,3 +112,4 @@ This is a **logical placement diagram**, not a final network map, storage topolo
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
 - [ADR-020: Local staging and simulated testing](0020-local-staging-automated-reliability-tests.md)
 - [ADR-023: BFF session database placement](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)

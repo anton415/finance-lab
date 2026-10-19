@@ -17,7 +17,7 @@ The local Linux workstation is proposed for **testing**, not for production fail
 - Retain **Yandex Cloud as primary production**, consistent with ADRs 016–019.
 - Set up an **isolated local Linux workstation running K3s for staging/testing** when the planned workstation is available. Deploy representative versions of the React/TypeScript SPA, TypeScript Web BFF, Go Budget/Portfolio/FIRE, Python AI/Analytics, Keycloak, Kafka, Redis, MongoDB and observability components as the scenario requires.
 - Prefer shared **versioned OCI images, API contracts and portable Kubernetes manifests/Helm charts**, with staging-specific sizing, configuration, database initialization and secrets.
-- Use **fully synthetic users and financial records**, staging-only test credentials and a separate local/test PostgreSQL. **Never connect staging tests to the writable production PostgreSQL, Kafka, MongoDB, Keycloak realm, or private users' real financial data.** Test identity, networks and credentials are isolated from production.
+- Use **fully synthetic users and financial records**, staging-only test credentials and a separate local/test PostgreSQL. **Never connect staging tests to the writable production PostgreSQL, Kafka, MongoDB, Keycloak realm, or private users' real financial data.** **ADR-027 explicitly prohibits granting local staging production Lockbox/ESO bootstrap access.** Test identity, networks, IAM and credentials are isolated from production.
 - If the local workstation is not procured or capable by the release date, run equivalent tests in a temporary **isolated nonproduction environment** and record that substitution. The ADR does not claim a purchased workstation, deployed K3s cluster or measured capacity.
 
 ### Initial three automated workflows (2026)
@@ -108,6 +108,7 @@ flowchart TD
 - [ADR-022: Exact decimal Money and currencies](0022-exact-decimal-money-currency-contract.md)
 - [ADR-024: API contract verification](0024-openapi-contract-first-rest-versioning.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 
 ## Technical references
 

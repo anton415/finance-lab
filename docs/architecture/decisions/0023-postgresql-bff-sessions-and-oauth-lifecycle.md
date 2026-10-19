@@ -17,7 +17,7 @@ Redis is currently a **non-authoritative Analytics simulation cache inside K3s**
 - Store BFF-owned session metadata and **encrypted server-side OAuth access/refresh tokens in a dedicated logical PostgreSQL database inside the existing Yandex Managed PostgreSQL cluster**. The BFF owns its database role, schema, migrations, access policies and lifecycle queries. Its role cannot access financial-domain or Keycloak database tables.
 - The BFF session database is **not a financial business database** and does not grant the BFF authority over budgets, investments or FIRE resources. PostgreSQL is shared physical infrastructure, **not shared logical data access**.
 - The browser receives only a **cryptographically strong, opaque session identifier** in a Secure, HttpOnly cookie. Do not expose OAuth tokens or refresh tokens through JavaScript, browser local storage, URLs, logs, metrics, or client responses. Prefer storing a **non-reversible hash of the session identifier** as the database lookup key; never treat a guessable identifier as a session.
-- Encrypt OAuth tokens and other sensitive session secrets **before saving them in PostgreSQL** using application-side authenticated encryption. Store encryption keys in a separately protected secret/KMS mechanism, **not in the same database or source-control repository**. Plan key rotation and recovery safely. Use protected network connectivity and TLS to PostgreSQL.
+- Encrypt OAuth tokens and other sensitive session secrets **before saving them in PostgreSQL** using application-side authenticated encryption. Store encryption keys **separately in the protected Yandex Lockbox/ESO secret-delivery architecture of ADR-027**, never in the session database or source repository. The exact envelope encryption/KMS mechanism remains implementation work. Plan key rotation and recovery safely. Use protected network connectivity and TLS to PostgreSQL.
 - Enforce least-privilege BFF database access and bounded retention/cleanup for expired or revoked records. Index lookups/expiry fields as needed; limit recorded personal metadata and exclude all secrets from logs/traces and public metrics.
 - Redis and MongoDB **are not the BFF session store** under Release 1. Redis cache expiry or Analytics outages must not invalidate BFF security policy or change authentication semantics.
 
@@ -97,5 +97,6 @@ The diagram is **logical**. A single managed PostgreSQL cluster contains separat
 - [ADR-015: Redis/MongoDB ownership](0015-analytics-redis-cache-mongodb-reports.md)
 - [ADR-018: Managed PostgreSQL infrastructure](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [Keycloak OIDC endpoints](https://www.keycloak.org/securing-apps/oidc-layers)

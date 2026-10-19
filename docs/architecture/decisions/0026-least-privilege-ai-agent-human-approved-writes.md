@@ -32,7 +32,7 @@ The initial complete scenario is **read-only analysis of a user-selected month's
 
 - Use a **trusted AI Tool Executor** as an application-controlled enforcement boundary; this is a logical component within approved existing services, **not a new independently deployed microservice mandated by this ADR**. Maintain an explicit allowlist of tool names, validated argument schemas, targets and maximum responses. The LLM **proposes** a tool call; only trusted application code decides whether, how and with which credentials to execute it.
 - A tool requiring private data must receive **user-specific, time-limited, purpose/audience-restricted authorization** through an approved Keycloak/BFF delegation flow (ADR-014). The user's request grants no more than narrowly scoped read rights. A generic machine account **must not impersonate users or read arbitrary user records**. Go services independently validate token issuer, audience, effective scope, user identity and resource ownership.
-- Keep bearer tokens, refresh tokens, BFF sessions, API keys and provider credentials **outside model prompts, model tool results and untrusted model-directed code**. Do not allow arbitrary model-selected URLs, outbound network destinations, filesystem paths, scripts, database SQL, or dynamic registration of privileged tools. Apply least-privilege network egress and service permissions.
+- Keep bearer tokens, refresh tokens, BFF sessions, API keys and provider credentials **outside model prompts, model tool results and untrusted model-directed code**. Obtain the model-provider key through **ADR-027's least-privilege Lockbox/ESO delivery**, not user-provided prompts, shared configs or hard-coded images. Do not allow arbitrary model-selected URLs, outbound network destinations, filesystem paths, scripts, database SQL, or dynamic registration of privileged tools. Apply least-privilege network egress and service permissions.
 - Treat **model text, untrusted user inputs, retrieved financial notes, imported files and tool output as untrusted data**; instructions embedded in them never change authorization policy, tool permissions or approval requirements. Validate output and tool inputs at deterministic application boundaries; model instructions/prompt wording alone do not enforce security.
 - AI/Analytics access is via **approved service APIs only**, not another service's database or indiscriminate Kafka subscriber access. Agent failure, prompt injection or provider outage cannot change authoritative financial records.
 
@@ -113,5 +113,6 @@ flowchart TD
 - [ADR-022: Exact Money and financial revisions](0022-exact-decimal-money-currency-contract.md)
 - [ADR-023: PostgreSQL BFF session lifecycle](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
 - [ADR-024: Service-owned REST contracts](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [AI Agent prototype](https://github.com/anton415/finance-lab-agent)
 - [OWASP AI Agent Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html)

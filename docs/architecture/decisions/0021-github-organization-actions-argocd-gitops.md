@@ -24,7 +24,7 @@ The user compared GitLab against GitHub for grouping many repositories into one 
 - Use **GitHub Actions** as the primary CI system, extending the existing workflows rather than replacing them. Apply relevant language-specific lint, unit tests, API contract tests, integration checks, build validation, dependency/security checks and test evidence to each changed component; avoid requiring expensive full-system tests for every small PR. **ADR-024 adds OpenAPI 3.1 document validation, comparison against released provider contracts, and generation/verification of affected TypeScript/Python clients** without mistaking schema-diff success for semantic compatibility.
 - Keep human-owned issue acceptance criteria and **scope-bounded AI implementation/review**. Codex/cloud reviews are advisory; merge requires passing applicable checks and a **human review/acceptance decision**. Never claim pending workflows or Codecov results have passed. **This software-development agent workflow is separate from ADR-026's user-facing product AI Agent; approval to merge code grants no financial-data access or user-write permissions.**
 - On trusted mainline commits, build traceable **versioned OCI images** for services, pin deployments to **immutable image digests**, and promote the **same verified digest** from staging to production rather than rebuilding an unverified substitute.
-- Preserve least-privilege workflow tokens. The existing `pull_request_target` workflows that write PR metrics must execute trusted default-branch code only, **never untrusted PR checkout/scripts with a write-capable credential**. Do not expose deploy tokens, cloud secrets or privileged self-hosted runners to untrusted/fork PRs.
+- Preserve least-privilege workflow tokens. The existing `pull_request_target` workflows that write PR metrics must execute trusted default-branch code only, **never untrusted PR checkout/scripts with a write-capable credential**. Do not expose deploy tokens, cloud secrets or privileged self-hosted runners to untrusted/fork PRs. **ADR-027 selects Yandex Lockbox + ESO for production runtime secrets; GitOps includes only secret references and GitHub→Yandex OIDC federation is preferred for supported trusted CI operations.**
 
 ### Deployment and production promotion
 
@@ -95,6 +95,7 @@ This is a **future logical workflow**, not an assertion that the organization, m
 - [ADR-024: Service-owned OpenAPI governance](0024-openapi-contract-first-rest-versioning.md)
 - [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
+- [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 
 ## References
 
