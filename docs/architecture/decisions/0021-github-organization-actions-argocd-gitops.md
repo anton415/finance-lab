@@ -81,7 +81,7 @@ This is a **future logical workflow**, not an assertion that the organization, m
 ## Migration and implementation verification
 
 - Create the organization only after selecting a unique slug and explicit approval; inventory source repositories, open PRs/issues, GitHub Projects, workflow secrets, deployment keys, registries and external references before transferring them. Verify actions, branch rules, collaborator rights, old links and connected-app permissions afterward.
-- Start by retaining and extending existing GitHub Actions. Each future repository must document its relevant checks and truthfully report observed results, aligned with existing `AGENTS.md`. Under **ADR-025**, validate Portfolio-owned CloudEvents/JSON Schema files, synthetic event fixtures, and Portfolio–Analytics consumer compatibility **separately from REST OpenAPI checks**.
+- Start by retaining and extending existing GitHub Actions. Each future repository must document its relevant checks and truthfully report observed results, aligned with existing `AGENTS.md`. Under **ADR-025**, validate Portfolio-owned CloudEvents/JSON Schema files, synthetic event fixtures, and Portfolio–Analytics consumer compatibility **separately from REST OpenAPI checks**. **ADR-030 prioritizes verified Go Budget v1 + Keycloak/BFF delivery** and requires separately approved changes to legacy Spring T2 issue scopes; this Go target does not authorize bulk issue edits, new repositories or GitHub Organization transfers.
 - Test image-digest promotion, isolated local staging, Argo CD sync/rollback and a gated production deployment; do not present unexecuted integration/CI work as complete.
 - Argo CD, runner and stateful-cluster resource overhead must be included in K3s sizing. A production promotion must remain manually controlled even if staging reconciliation is automatic.
 - Exact GitHub organization slug, repository transfer schedule, self-hosted versus hosted runners, OCI registry choice, GitOps layouts, credentials, protection features and costs remain implementation decisions.
@@ -96,6 +96,7 @@ This is a **future logical workflow**, not an assertion that the organization, m
 - [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
 
 ## References
 

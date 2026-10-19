@@ -33,7 +33,7 @@ This decision revises the **previously proposed 8 vCPU / 32 GB K3s starting poin
 | **Staging/testing** | **Local isolated Linux K3s when available**; otherwise a small, time-bounded approved nonproduction alternative | Synthetic data only. **No permanent second paid cloud cluster** approved (ADR-020). |
 | **Optional public LB** | Compare direct public IP against Yandex Network Load Balancer (ADR-028) | Add a load balancer only when actual security/topology benefits and cost fit. No HA claim from a one-node backend. |
 
-The **4 vCPU / 16 GB K3s plan is conditional**: include Keycloak, Kafka, MongoDB, Redis, private observability, Argo CD, ESO, cert-manager, all five language/runtime services and Traefik when measuring, plus K3s/OS overhead. Do not pass a benchmark by quietly removing previously accepted production dependencies or dropping their required data durability, authorization or observability.
+The **4 vCPU / 16 GB K3s plan is conditional**: include Keycloak, Kafka, MongoDB, Redis, private observability, Argo CD, ESO, cert-manager, all five language/runtime services and Traefik when measuring, plus K3s/OS overhead. **ADR-030 stages delivery around the initial authenticated Go Budget slice but still requires a complete Release 1 full-stack benchmark** before treating this VM candidate as proven. Do not pass a benchmark by quietly removing previously accepted production dependencies or dropping required durability, authorization or observability.
 
 ### Preliminary monthly estimate, not a tariff quotation
 
@@ -115,6 +115,7 @@ flowchart TD
 - [ADR-026: AI spending and tool quotas](0026-least-privilege-ai-agent-human-approved-writes.md)
 - [ADR-027: Lockbox/ESO cost and isolation](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [ADR-028: Network and conditional load balancer](0028-public-dns-traefik-private-network-tls.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
 - [Yandex Compute Cloud pricing](https://yandex.cloud/en/docs/compute/pricing)
 - [Yandex Managed PostgreSQL pricing](https://yandex.cloud/en/docs/managed-postgresql/pricing)
 - [Yandex Cloud billing budgets](https://yandex.cloud/en/docs/billing/concepts/budget)

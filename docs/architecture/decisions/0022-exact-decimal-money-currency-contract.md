@@ -36,7 +36,7 @@ Represent money using a **decimal string and a mandatory currency identity** in 
 
 - The V2 backup/restore format is unchanged: keep its original **currency-free** document shape, valid and invalid amount strings, original-string round-trip, finite-binary64 validation, browser-storage contract, existing fixtures and current derived display behavior.
 - **Do not silently reinterpret, discard, normalize, re-round or reject** valid V2 strings during future transition. A separately approved, versioned import/API migration must explicitly assign/confirm currencies, define how to handle historical scientific notation, underflow/overprecision and bounds, and validate all existing V2 fixtures before rollout.
-- Keep existing Java/Spring T2 budget versions, concurrency conflict handling, idempotency-key replay and retention behavior intact until a deliberate implementation migration. The Money target contract does not claim the Go implementation or migration is complete.
+- Keep existing Java/Spring T2 budget versions, concurrency conflict handling, idempotency-key replay and retention behavior intact until a deliberate implementation migration. **ADR-030 selects direct Go Budget implementation but explicitly requires a separately reviewed V2→v1 contract/import transition**, including historical amount spellings, explicit currency assignment and no silent reinterpretation. The Money target contract does not claim the Go implementation or migration is complete.
 
 ## Architecture diagram
 
@@ -101,6 +101,7 @@ The diagram describes a **target contract and ownership model**, not deployed AP
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-020: Staging correctness tests](0020-local-staging-automated-reliability-tests.md)
 - [ADR-024: Money DTO in OpenAPI](0024-openapi-contract-first-rest-versioning.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
 - [Existing V2 budget backup contract](../../budget-backup-contract.md)
 - [Existing T2 persistence design](../../t2/design.md)
 - [PostgreSQL exact numeric types](https://www.postgresql.org/docs/current/datatype-numeric.html)

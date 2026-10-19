@@ -36,7 +36,7 @@ The existing budget backup **V2 document contract** and Java/Spring T2 concurren
 ### CI, compatibility and Kafka boundary
 
 - Use **GitHub Actions** (ADR-021) to lint/validate service OpenAPI definitions, check changes against the **last released contract**, run provider/API conformance and compile/test affected TypeScript/Python clients. Static/schema checks are not proof of semantic compatibility; human review remains required.
-- Test representative **Budget and Portfolio `v1` contracts first**: authorized/unauthorized requests, standard problems, exact Money serialization, and client compatibility. Exercise changed contracts in isolated staging (ADR-020) before production promotion. Expand to FIRE/Analytics once their endpoints exist.
+- Test representative **Budget and Portfolio `v1` contracts first**: authorized/unauthorized requests, standard problems, exact Money serialization, and client compatibility. **ADR-030 prioritizes the Go Budget v1 contract and Keycloak/BFF adapter as the first end-to-end implementation**, while the historical Spring T2 endpoint/error bodies and currency-free V2 backups stay unchanged until separately approved migration. Exercise changed contracts in isolated staging (ADR-020) before production promotion. Expand to FIRE/Analytics once their endpoints exist.
 - Kafka event schemas are **not OpenAPI REST contracts**. **ADR-025 separately accepts CloudEvents 1.0 structured JSON, producer-owned JSON Schema and `PortfolioChanged` on `portfolio.events.v1`**. Schema evolution and event consumer checks remain separate from REST major versions. Future monetary event payloads still obey ADR-022. Do not expose confidential internal API definitions publicly by default.
 
 ## Architecture diagram
@@ -90,6 +90,7 @@ This is a **target contract workflow**, not proof of an existing Go v1 API, publ
 - [ADR-021: GitHub Actions CI](0021-github-organization-actions-argocd-gitops.md)
 - [ADR-022: Money representation](0022-exact-decimal-money-currency-contract.md)
 - [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
 - [Existing V2 budget backup contract](../../budget-backup-contract.md)
 - [Existing T2 budget design](../../t2/design.md)
 - [OpenAPI 3.1 specification](https://spec.openapis.org/oas/v3.1.1.html)

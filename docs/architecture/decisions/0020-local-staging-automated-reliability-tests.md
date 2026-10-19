@@ -40,7 +40,7 @@ The **staging-only AI test coordinator** can propose scenarios, choose from appr
 
 ### Release acceptance and future work
 
-- Before Release 1, execute at least one repeatable workflow for each of Playwright user simulation, bounded k6 load, and allowlisted security/authorization tests **on isolated staging** and retain measurements and findings. Under ADR-024 verify representative OpenAPI v1 provider responses, safe RFC 9457 failures, exact Money serialization and old-client compatibility independently from Kafka schemas. Under ADR-021, promote reviewed, versioned images via GitHub Actions and Argo CD and **require explicit human approval before production**. Expensive tests and active scans must stay within approved staging scopes.
+- Before Release 1, execute at least one repeatable workflow for each of Playwright user simulation, bounded k6 load, and allowlisted security/authorization tests **on isolated staging** and retain measurements and findings. **ADR-030 prioritizes first testing the Go Budget/Keycloak/BFF end-to-end slice**, then expanding to Portfolio/Kafka and FIRE/Analytics. Under ADR-024 verify OpenAPI v1 responses, safe RFC 9457 failures, exact Money serialization and old-client compatibility independently from Kafka schemas. Under ADR-021, promote reviewed, versioned images via GitHub Actions and Argo CD and **require explicit human approval before production**. Expensive tests and active scans must stay within approved staging scopes.
 - Record the tested environment honestly if local workstation provisioning is still pending. Exact local hardware, K3s node sizing, fixture generation and test scheduling are implementation decisions.
 - Broader **chaos engineering** experiments, automated root-cause investigations and potential **local/cloud active-passive failover** are future evolutions and must be explicitly scoped, authorized and tested before exposing private data.
 - ADR-019 still governs backups and disaster recovery. A local test cluster alone does not protect against a full Yandex outage; no automatic backup replication or production traffic cutover is implied.
@@ -110,6 +110,7 @@ flowchart TD
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
 
 ## Technical references
 

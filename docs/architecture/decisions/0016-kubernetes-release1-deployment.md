@@ -87,7 +87,7 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 
 ## Minimum release verification
 
-- Deploy the selected Release 1 API workloads and Traefik to a real Kubernetes cluster using reproducible configuration and versioned images; prove startup, readiness, routing, authenticated requests and isolation of internal-only endpoints.
+- Deploy the selected Release 1 API workloads and Traefik to a real Kubernetes cluster using reproducible configuration and versioned images; prove startup, readiness, routing, authenticated requests and isolation of internal-only endpoints. Under **ADR-030, start platform foundation alongside Go Budget** and prove the first authenticated cross-device Budget read/save slice before expanding to Portfolio, FIRE and product AI. This prioritizes integration evidence early, **not** postponing the accepted platform security and backups.
 - Demonstrate a service-specific rollout and rollback, a failed/unready pod excluded from traffic, and an application restart with recorded recovery behavior.
 - Define and verify resource requests, limits, storage/recovery for selected stateful systems, cluster access controls and protection of secrets. **ADR-029 sets a ₽35,000/month approved ceiling and ₽15,000–20,000 target, with a conditional 4 vCPU / 16 GB single-node K3s candidate**. Capacity and real all-in pricing **must be verified before provisioning**, not assumed from fewer than ten users.
 - Connect application logs/metrics/traces to the observability design (ADR-001), retaining the public/private telemetry separation (ADR-011).
@@ -120,3 +120,4 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [ADR-028: Public DNS, private VPC and TLS](0028-public-dns-traefik-private-network-tls.md)
 - [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)

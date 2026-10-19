@@ -71,7 +71,7 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 
 ## Migration and deferred choices
 
-- The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. Selecting Go as the **target** does not assert that migration has happened, delete that work, or cancel existing T2 contracts. Plan migration and preservation of verified behavior separately. **ADR-021 selects a future GitHub Organization and separate deployable-service repositories**, but the present repo and draft architecture PR will not be moved without a migration plan.
+- The existing `finance-lab` repository currently contains a Java/Spring Boot budget backend. **ADR-030 selects direct implementation of production Go Budget + Keycloak/BFF**, rather than completing an additional temporary Spring persistence/session stack first. This does **not** assert migration has happened, delete existing T2 contracts/tests or authorize issue/status changes. Preserve verified T2 behavior and V2 backups through separately reviewed migration. **ADR-021 selects a future GitHub Organization and separate deployable-service repositories**, but no transfer occurs without separate approval.
 - Java is not chosen merely to fill a platform role; introduce a Java component only if future requirements justify one.
 - Python Analytics with an in-process Rust library is accepted for Release 1 (ADR-007); a separate Rust computation service is planned for Release 2. This does not turn Rust into an independent microservice in 2026.
 - Keycloak identity and per-service authorization are accepted in ADR-006; REST + Kafka Portfolio integration is accepted in ADR-009. BFF-managed browser sessions are accepted in ADR-013. Session-store technology, delegated service identity, event contracts, any future native-client BFFs and detailed deployment configuration remain separate design work. The Web BFF is accepted in ADR-012, and independent static SPA hosting in ADR-010.
@@ -92,3 +92,4 @@ This is a **logical capability and ingress diagram**, not a deployment diagram. 
 - [ADR-022: Exact decimal Money contracts](0022-exact-decimal-money-currency-contract.md)
 - [ADR-024: Contract-first REST APIs](0024-openapi-contract-first-rest-versioning.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)

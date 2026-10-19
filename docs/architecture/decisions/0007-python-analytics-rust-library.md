@@ -63,7 +63,7 @@ The highlighted Rust box is an **in-process library**, not a separate service or
 - Gains Rust programming and numerical-performance experience without a fourth financial domain service or separate Rust deployment in 2026.
 - The Python Analytics Service owns the library build, packaging, compatibility, observability and error boundaries.
 - Financial data remains owned by existing Go domain services. **ADR-015** now defines Analytics-owned Redis caching of expensive simulations and MongoDB persistence of explicitly saved, versioned analysis reports. Neither store is the source of financial records; exact schema, TTL, operational and security implementation details remain separate work.
-- Scope a single simulation use case for 2026; do not imply broad production-grade investment advice or formally validated retirement probabilities.
+- Scope a single simulation use case for 2026; do not imply broad production-grade investment advice or formally validated retirement probabilities. **ADR-030 places this optional Analytics/Rust + Redis/MongoDB integration after the first authenticated Go Budget slice and initial Portfolio integration**, while keeping it within accepted Release 1 scope unless the user explicitly revises scope or date.
 
 ## References
 
@@ -73,3 +73,4 @@ The highlighted Rust box is an **in-process library**, not a separate service or
 - [ADR-015: Redis simulation cache and MongoDB saved reports](0015-analytics-redis-cache-mongodb-reports.md)
 - [ADR-022: Exact monetary domain boundaries](0022-exact-decimal-money-currency-contract.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
+- [ADR-030: Go migration and Release 1 implementation sequence](0030-release1-go-migration-implementation-sequence.md)
