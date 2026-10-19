@@ -37,7 +37,7 @@ The **production** K3s cluster hosts containerized business services, BFF, Pytho
 - **MongoDB:** saved analysis reports are **durable private data**, not a disposable cache. Define an independent backup/restore strategy, retention and owner authorization; losing MongoDB may lose reports even while Go financial records survive.
 - **Redis:** optional derived cache data can be lost; calculation must fall back or explicitly fail without incorrect financial results. **ADR-023 selects Managed PostgreSQL for BFF session state; Redis remains an Analytics cache only.**
 - **Observability:** keep operator endpoints on **ADR-028's private authenticated administration network/VPN**, configure retention and resource limits and prohibit financial data in metrics/logs/traces. Public metrics flow through the sanitized export design (ADR-011), never by publishing full Grafana/Prometheus/Loki/Jaeger.
-- **Operational cost/capacity:** benchmark combined VM memory/CPU/disk pressure for Keycloak, Kafka, MongoDB, Redis and observability **before selecting VM count and size**. A single VM may be insufficient and is **not highly available**. Do not assume self-hosting is cheaper once VM capacity, disks, backups, operational time and managed PostgreSQL charges are included.
+- **Operational cost/capacity:** benchmark combined VM memory/CPU/disk pressure for Keycloak, Kafka, MongoDB, Redis and observability **before committing to ADR-029's 4 vCPU / 16 GB K3s candidate**. Include Go/Python services, BFF, Argo CD, ESO, cert-manager and control-plane overhead. One VM may be insufficient and is **not highly available**; do not remove required storage/backup/telemetry to force a fit. Measure VM capacity, disks, backups, operational time and managed PostgreSQL charges.
 
 ## Logical deployment diagram
 
@@ -91,12 +91,12 @@ This is a **logical placement diagram**, not a final network map, storage topolo
 
 ## Minimum release verification and tradeoffs
 
-- Record a **cost estimate and approved spending ceiling** for Managed PostgreSQL, K3s VMs, persistent disks, load balancing, backups and network traffic; test whether the full stack fits its proposed hardware before leaving it running continuously.
+- **ADR-029 sets the ceiling at ₽35,000/month and target at ₽15,000–20,000**. Price Managed PostgreSQL, K3s VMs, persistent disks, load balancing if justified, backups, CDN/network traffic, Lockbox and AI calls, and test the full stack against actual hardware **before leaving it running continuously**. Estimates are not a live provider quote or automatic billing limit.
 - Verify PostgreSQL logical database/user isolation, TLS/private routing and recoverability of both financial and Keycloak state.
 - Verify Kafka outage/restart and duplicate replay, persistent MongoDB reports and restoration, Redis cache loss, Keycloak restart, and observability outage without corrupting the authoritative financial records.
 - Configure resource requests/limits, storage monitoring, appropriate probes and recovery runbooks for the in-cluster dependencies. Under **ADR-027**, production secrets originate in Yandex Lockbox, are materialized through restricted ESO into encrypted K3s Secrets, and are accessible only by approved consumers. Keep secret values out of committed manifests, images and CI artifacts.
 - The managed PostgreSQL service reduces some database operations but does **not** eliminate backup validation, database maintenance planning, region/provider dependency or single-host failure risk.
-- Specific Managed PostgreSQL host configuration/HA tier, Kafka broker topology, persistent-storage class, backup tooling/retention, Keycloak upgrade process, exact observability collectors, K3s VM sizing and **BFF session-store implementation details (ADR-023)** remain follow-up decisions.
+- Specific Managed PostgreSQL host/HA/PITR tier (ADR-029 suggests but has not verified 2 vCPU / 8 GB), Kafka broker topology, persistent-storage class, backup tooling/retention, Keycloak upgrade process, observability retention, **final K3s VM sizing after benchmarking** and BFF session-store details (ADR-023) remain follow-up decisions.
 - The early-2027 temporary Managed Kubernetes evaluation (ADR-017) must use a **separate test data environment** or an approved migration plan; it must not become a second uncontrolled writer to production PostgreSQL.
 
 ## Related decisions
@@ -114,3 +114,4 @@ This is a **logical placement diagram**, not a final network map, storage topolo
 - [ADR-023: BFF session database placement](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [ADR-028: Public DNS, private VPC and TLS](0028-public-dns-traefik-private-network-tls.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)

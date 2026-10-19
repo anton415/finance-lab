@@ -14,7 +14,7 @@ We compared direct SPA token handling, a token-mediating backend, and a BFF that
 
 - The **Web BFF is the OAuth/OIDC client** for the browser application. Authenticate users through **Keycloak using Authorization Code + PKCE**, with validated `state` (and OIDC `nonce` where appropriate), a trusted redirect URI and secure back-channel code exchange. Do not use implicit or resource-owner-password flows.
 - **Keep OAuth access and refresh tokens on the server side**, not in frontend JavaScript, `localStorage`, URLs, or browser-visible API responses. The BFF manages obtaining/refreshing tokens according to a bounded server-side session.
-- The browser receives a **secure, HttpOnly session cookie** holding only an opaque session reference. Require HTTPS, an appropriate `SameSite` setting, narrow cookie scope, session-ID rotation on authentication and explicit session expiry/termination. **ADR-028 prefers a host-only cookie on `api.<domain>`**, separate from the `app.<domain>` SPA origin and `auth.<domain>` Keycloak origin. The exact cookie attributes/redirects depend on deployment and must be tested with restricted credentialed CORS and CSRF defenses.
+- The browser receives a **secure, HttpOnly session cookie** holding only an opaque session reference. Require HTTPS, an appropriate `SameSite` setting, narrow cookie scope, session-ID rotation on authentication and explicit session expiry/termination. The exact cookie/domain settings depend on the deployment and OIDC redirect design.
 - The Web BFF handles **all private browser API requests, including reads and writes**. It can compose read-only overview responses (ADR-012) and forward authorized mutation requests to the owning Go service, but does **not** own financial transactions or financial business rules.
 - Protect state-changing browser requests against **CSRF** using a validated anti-CSRF scheme and origin checks as appropriate; `SameSite` is defense in depth, not the only protection. Restrict cross-origin access to approved origins and configure credentials deliberately.
 - Each Go domain service continues to **authenticate the security context it receives and enforce resource-level authorization itself** (ADR-006). For user-initiated downstream calls, the BFF uses Keycloak Token Exchange with audience restriction and effective downscoping (ADR-014). Exact client/audience/role mappings are implementation work; never trust a browser-supplied user ID or unsigned identity header.
@@ -62,7 +62,7 @@ flowchart TD
 - Browser JavaScript does not receive financial API bearer/refresh tokens; secure cookies still require XSS prevention, CSRF safeguards and correct lifecycle management.
 - The BFF becomes critical for private **web** requests but **not** for static website asset delivery or independently authorized native clients.
 - Test: successful/failed login; invalid `state` or code; token/session expiry; logout and session invalidation; CSRF attempts; forbidden CORS origins; session fixation; cross-user access; and Go-service rejection of missing/incorrect audience tokens.
-- Verify browser redirect, host-only API cookie and CORS/CSRF behavior with the **ADR-028 three-hostname layout** and the eventual real registered domain before accepting the deployment; being same-site does not make the distinct origins equivalent.
+- Verify browser redirect, cookie and CORS behavior with the **actual chosen domain/origin layout** before accepting the deployment.
 - **Session persistence is selected in ADR-023.** Specify the PostgreSQL schema, encryption/key rotation, session timeouts, CSRF/cookie attributes, BFF HTTP framework, logout integrations and token-exchange client mappings before implementation. The service-to-service token model is accepted in ADR-014.
 
 ## Related decisions
@@ -73,4 +73,3 @@ flowchart TD
 - [ADR-012: TypeScript Web BFF](0012-typescript-web-bff-api-composition.md)
 - [ADR-014: Service-to-service security](0014-keycloak-service-to-service-security.md)
 - [ADR-023: PostgreSQL-backed BFF sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
-- [ADR-028: Public DNS, private VPC and TLS](0028-public-dns-traefik-private-network-tls.md)

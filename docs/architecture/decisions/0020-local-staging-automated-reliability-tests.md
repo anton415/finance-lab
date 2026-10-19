@@ -35,7 +35,7 @@ The **staging-only AI test coordinator** can propose scenarios, choose from appr
 - Record test scenario, versions, synthetic dataset/seed, hardware and resource limits, measured p95 latency, throughput, error rates, response correctness and recovery time. Correlate failures with **Grafana, Prometheus, Loki, OpenTelemetry and Jaeger** traces/metrics under ADR-001.
 - Follow an engineering loop: **hypothesis → controlled experiment → observable failure or limit → root-cause analysis → improvement → repeated measurement**. Do not invent failures or claim capacity not actually measured.
 - Include financial invariants and authorization tests, not merely successful HTTP status: user isolation, idempotency, correct amounts, committed changes and explicit errors when a dependency fails. **Test ADR-022 exact decimals/currencies, cross-currency rejection, and round-trip correctness during retries/concurrent saves.**
-- A load result for the **local workstation is not a cloud-production capacity estimate**: network, cloud VM, resource caps and managed PostgreSQL can differ. Any production capacity claim needs separate approved testing under a representative environment.
+- A load result for the **local workstation is not a cloud-production capacity estimate**: network, cloud VM, resource caps and managed PostgreSQL can differ. **ADR-029's provisional 4 vCPU / 16 GB K3s candidate must be validated on the representative Yandex environment**; local synthetic benchmarks cannot certify that the complete production stack fits or that the ₽35,000 ceiling will be met.
 - Manually review and sanitize any experiment summary before publishing as portfolio evidence through the public engineering dashboard (ADR-011). Do not expose credentials, raw security findings, private financial records, internal topology or unsanitized traces in public content.
 
 ### Release acceptance and future work
@@ -109,6 +109,7 @@ flowchart TD
 - [ADR-024: API contract verification](0024-openapi-contract-first-rest-versioning.md)
 - [ADR-026: Least-privilege product agents and human-approved writes](0026-least-privilege-ai-agent-human-approved-writes.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)
 
 ## Technical references
 

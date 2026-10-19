@@ -88,7 +88,7 @@ The flow represents **backup sources and controlled recovery**, not live replica
 
 ## Consequences and deferred work
 
-- Establishes measurable operational recovery work for 2026 without the cost or complexity of a second always-on production cluster.
+- Establishes measurable operational recovery work for 2026 without the cost or complexity of a second always-on production cluster. **ADR-029's ₽35,000/month ceiling and low-user volume do not waive PostgreSQL/PITR, MongoDB or K3s off-cluster backup and mandatory restore tests**; storage and backup costs must be included in the all-in estimate.
 - Off-cluster backups protect against some single-VM disasters but **do not guarantee independence from a full Yandex Cloud/provider or regional outage**. A geographically separate restore site and tested off-provider copies are possible future additions.
 - **ADR-027 accepts Yandex Lockbox/ESO and K3s Secret encryption**; the disaster-recovery drill must recover protected ESO bootstrap access and K3s encryption material, redeploy GitOps references, and test credential revocation/rotation without embedding real secret values in backups or Git. Final backup tooling, encryption/retention configuration, storage costs, IAM/KMS policies, concrete managed PostgreSQL host settings, Kubernetes datastore choice and procedures require implementation decisions.
 - **ADR-020 accepts an isolated local K3s environment for synthetic testing**, potentially also useful for controlled recovery rehearsals. It does **not** accept an active production standby, replication, or automatic Yandex/local failover. Promotion, fencing, traffic switching and split-brain prevention require a separate decision before use with real private data.
@@ -107,3 +107,4 @@ The flow represents **backup sources and controlled recovery**, not live replica
 - [ADR-023: Session invalidation after restore](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
 - [ADR-025: CloudEvents and JSON Schema Portfolio events](0025-cloudevents-json-schema-portfolio-events.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)

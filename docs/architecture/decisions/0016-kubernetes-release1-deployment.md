@@ -89,14 +89,14 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 
 - Deploy the selected Release 1 API workloads and Traefik to a real Kubernetes cluster using reproducible configuration and versioned images; prove startup, readiness, routing, authenticated requests and isolation of internal-only endpoints.
 - Demonstrate a service-specific rollout and rollback, a failed/unready pod excluded from traffic, and an application restart with recorded recovery behavior.
-- Define and verify resource requests, limits, storage/recovery for selected stateful systems, cluster access controls and protection of secrets. Include cost measurement and an explicit budget ceiling **before provisioning a long-running cluster**.
+- Define and verify resource requests, limits, storage/recovery for selected stateful systems, cluster access controls and protection of secrets. **ADR-029 sets a ₽35,000/month approved ceiling and ₽15,000–20,000 target, with a conditional 4 vCPU / 16 GB single-node K3s candidate**. Capacity and real all-in pricing **must be verified before provisioning**, not assumed from fewer than ten users.
 - Connect application logs/metrics/traces to the observability design (ADR-001), retaining the public/private telemetry separation (ADR-011).
 - Test the failure boundaries honestly: losing a sole worker or control plane can take the platform offline. Do not claim an HA or multi-zone SLO without deploying and testing it.
 
 ## Consequences and deferred choices
 
 - Adds substantial Kubernetes, networking, provisioning, monitoring and security work to the 2026 deadline. Scope should prioritize **one functioning end-to-end deployment** over advanced orchestration features.
-- **ADR-017 accepts K3s first and a temporary Yandex Managed Kubernetes comparison in early 2027.** The cluster's worker count, VM sizing, regions/zones, cost ceiling, precise infrastructure-as-code and CI/CD/GitOps mechanism remain unselected. The eventual production cluster after comparison must be chosen from measured evidence and an approved migration plan.
+- **ADR-017 accepts K3s first and a temporary Yandex Managed Kubernetes comparison in early 2027.** **ADR-029 now fixes the monthly spending ceiling and a tentative one-VM, 4 vCPU / 16 GB starting candidate**, contingent on full-stack resource/cost measurements. Final production VM size, regions/zones, precise infrastructure-as-code and CI/CD/GitOps implementation remain open. Any eventual production-cluster migration requires measured evidence and a separate approved plan.
 - **ADR-028 selects the public DNS hostname pattern, HTTPS certificate strategies and private VPC/admin boundaries.** Traefik provider/routing API (Kubernetes Ingress vs Gateway API), actual registered domain, K3s CNI/policy enforcement, optional direct-public-IP versus network-load-balancer entry, internal TLS PKI and detailed DNS/certificate challenge configuration remain implementation decisions. Secret source/delivery follows ADR-027.
 - Stateful component **placement is accepted in ADR-018**, and **ADR-019 establishes backup/recovery objectives and mandatory restore drills**. Specific backup tooling, persistent-volume design, message-broker topology, managed PostgreSQL tier and **the implementation of the ADR-023 PostgreSQL-backed BFF session store** remain open.
 - The 2027 release can pursue additional reliability or scaling capabilities, but **the initial use of Kubernetes is not postponed**.
@@ -119,3 +119,4 @@ The diagram shows **logical placement**, not approved node counts or availabilit
 - [ADR-023: Managed PostgreSQL sessions](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
 - [ADR-027: Yandex Lockbox, ESO and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
 - [ADR-028: Public DNS, private VPC and TLS](0028-public-dns-traefik-private-network-tls.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)

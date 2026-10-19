@@ -109,7 +109,7 @@ flowchart TD
 - From outside the VPC, verify denial of direct access to PostgreSQL, Kafka, Redis, MongoDB, private API ports, dashboards, Kubernetes API, SSH/Argo CD and **Keycloak administration/management endpoints**, including alternative host/port/path routes.
 - Verify VPC/host firewall and CNI NetworkPolicy restrictions on the actual infrastructure. Test attempted unauthorized pod-to-pod communication and VM metadata token access; confirm approved internal TLS certificate validation.
 - Prove operations are accessible only through the selected authenticated private operator channel and that local staging has **no production write or secret-fetch route**.
-- Record public-IP versus Yandex Network Load Balancer costs, node sizing, intended failover claims (if any) and an approved spending ceiling before leaving load-balancing infrastructure running.
+- Record public-IP versus Yandex Network Load Balancer costs, node sizing and intended failover claims (if any) before leaving load-balancing infrastructure running. **ADR-029 sets the overall Finance Lab recurring spending ceiling at ₽35,000/month and target at ₽15,000–20,000; a separate load balancer is conditional on measured need and all-in affordability.**
 - Exact domain registration, DNS provider, K3s CNI, Traefik Ingress versus Gateway API provider, LB type, private administrative VPN, internal TLS PKI, detailed cookie and proxy-header settings, certificate-challenge method and firewall manifests are **not fixed** by this ADR.
 - This ADR records **target architecture only**. No DNS/certificate purchase, VPC change, cluster provisioning or security scan is claimed complete.
 
@@ -126,6 +126,7 @@ flowchart TD
 - [ADR-020: Isolated local staging](0020-local-staging-automated-reliability-tests.md)
 - [ADR-023: BFF session lifecycle](0023-postgresql-bff-sessions-and-oauth-lifecycle.md)
 - [ADR-027: Lockbox and workload security](0027-lockbox-external-secrets-k3s-workload-security.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)
 - [Traefik routing](https://doc.traefik.io/traefik/)
 - [Keycloak reverse-proxy guidance](https://www.keycloak.org/server/reverseproxy)
 - [Yandex VPC security groups](https://yandex.cloud/en/docs/vpc/concepts/security-groups)

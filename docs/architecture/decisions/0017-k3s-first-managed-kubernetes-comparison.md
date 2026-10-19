@@ -15,7 +15,7 @@ The user accepted a staged strategy: **start with K3s, try Yandex Managed Kubern
 
 ### Phase 1 — Release 1 (by December 31, 2026)
 
-- Deploy the containerized Finance Lab backend and **Traefik on self-managed K3s running on Yandex Cloud VM infrastructure**, satisfying ADR-016. Start as economically as practical; favor a single VM **only if measured CPU, memory, storage and workload demands fit**. A single-VM K3s deployment is **not highly available**.
+- Deploy the containerized Finance Lab backend and **Traefik on self-managed K3s running on Yandex Cloud VM infrastructure**, satisfying ADR-016. **ADR-029 selects one 4 vCPU / 16 GB VM as a benchmark-gated starting candidate**, with a normal ₽15,000–20,000/month spending target and approved ₽35,000/month ceiling across Finance Lab infrastructure. Retain a single VM **only if full-stack CPU, memory, storage and workload demands fit**. A single-VM deployment is **not highly available**.
 - Maintain portable OCI images and **reproducible, standards-based Kubernetes manifests/Helm charts** with environment-specific settings. Avoid relying on K3s-only APIs or storage behavior in application manifests when reasonable.
 - Keep the independently hosted React SPA on Object Storage + CDN (ADR-010). **ADR-018 now places Yandex Managed PostgreSQL outside K3s and Kafka, Keycloak, Redis, MongoDB and the private observability stack inside K3s**; include their actual memory, disk and backup costs when sizing the initial cluster.
 - Verify installation, upgrades/restarts, authenticated ingress, application rollouts, failure recovery, backups/restores for stateful systems under ADR-019, resource utilization and **actual monthly cost**. Approve a spending ceiling before long-running provisioning. Define an explicit operational owner for security updates and cluster maintenance.
@@ -67,7 +67,7 @@ flowchart TD
 - During the managed-cluster evaluation, run comparable scenarios and document costs, administrative hours, security update responsibilities, restart/upgrade procedures and realistic failure recovery. Do not infer a reliability improvement merely from the provider name.
 - For any eventual migration, perform dry-run restore, check data integrity, establish rollback points and ensure a single writer for authoritative financial databases unless a separately reviewed replication design exists.
 - Self-managed K3s requires operating its control plane, nodes, patches, networking and etcd/SQLite data (as configured); budget sufficient time for maintenance and backups.
-- Exact VM/node sizing, cost ceiling, cluster access, storage classes, CNI/network-policy capabilities, the 2027 evaluation window and the final winner remain **open decisions**. This ADR does **not** commit to running two paid clusters permanently.
+- **ADR-029 accepts the spending ceiling and initial sizing candidate, not measured capacity or a fixed VM purchase**. Final VM/node count and performance tier, cluster access, storage classes, CNI/network policy, the 2027 evaluation window and final production winner still require measurement and implementation choices. This ADR does **not** commit to running two paid clusters permanently.
 
 ## References
 
@@ -80,3 +80,4 @@ flowchart TD
 - [ADR-018: Stateful infrastructure placement](0018-hybrid-managed-postgresql-k3s-platform-state.md)
 - [ADR-019: Backup and disaster recovery](0019-backup-recovery-objectives-drills.md)
 - [ADR-020: Local staging and automated reliability testing](0020-local-staging-automated-reliability-tests.md)
+- [ADR-029: Low-traffic K3s sizing and cloud budget](0029-low-traffic-k3s-sizing-cloud-spending-ceiling.md)
