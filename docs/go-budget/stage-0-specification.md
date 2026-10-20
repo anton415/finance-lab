@@ -9,7 +9,7 @@ Source snapshot: `anton415/finance-lab` at
 
 This is a human-readable specification and design checkpoint, not implemented
 Go behavior or a frozen public API. Independent specification review and human
-baseline acceptance are pending. The [revision record](revision-1.md) binds the
+baseline acceptance are pending. The accompanying `revision-1.md` record binds the
 captured [issue body](issue-142-source.md), this document/design and their hashes.
 Publication of this documentation does not authorize implementation or promotion.
 

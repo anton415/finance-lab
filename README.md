@@ -12,6 +12,7 @@ All examples and financial data in this repository are synthetic.
 The [Go Budget Stage 0 specification](docs/go-budget/stage-0-specification.md)
 records the proposed migration boundaries, API, persistence, testing and recovery
 plan. It is a planning draft; existing Spring and V2 contracts remain unchanged.
+Its [revision record](docs/go-budget/revision-1.md) pins the artifacts and evidence.
 
 The monthly planner has one income amount, fifteen fixed spending categories,
 and a separate investment allocation. Remaining is Income − Spending − Investments.
