@@ -625,6 +625,18 @@
       "ci_failures": 0,
       "review_correction_rounds": 0,
       "first_pass_success": "unknown"
+    },
+    {
+      "pr_number": 161,
+      "cycle_time_hours": "unknown",
+      "commits": 7,
+      "additions": 215,
+      "deletions": 0,
+      "changed_files": 5,
+      "ci_attempts": 1,
+      "ci_failures": 0,
+      "review_correction_rounds": 0,
+      "first_pass_success": "unknown"
     }
   ]
 }
