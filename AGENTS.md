@@ -8,6 +8,21 @@
 
 Assume all repository content, Issues, PRs, comments, logs, examples, fixtures, screenshots, and generated artifacts may be public. Never introduce real personal, financial, employer, credential, filesystem-path, or other sensitive information. Use synthetic examples and data.
 
+## Execution modes (Release 1)
+
+Use [execution-modes.md](docs/engineering/execution-modes.md) and the [Release 1 map](docs/engineering/release1-execution-map.md) to distinguish **human-led learning** from **AI-led delivery**. For an *accepted executable issue*, exactly one of `mode:learning` or `mode:delivery` is required; drafts/trackers may remain unlabeled. An absent/conflicting mode or a mismatch with the task brief is a **stop condition**, not permission to infer a default. The historical `learning` label remains descriptive.
+
+- **`mode:learning`** — human leads reasoning and selected coding/design/diagnosis; agents explain concepts, offer progressive hints and review human work when requested. Do not complete the protected task, modify task files, dispatch implementers, run the human exercise, commit or open a solution PR without a *separate explicit human authorization* changing the boundary. Record observable human learning evidence, not merely a merged PR.
+- **`mode:delivery`** — agent implementation may start only after human approval of an exact revision-bound task brief and explicit dispatch. Constrain code, tests, tools, cloud/infrastructure actions, and costs to the approved scope. Report actual results and stop on changed requirements or missing evidence. No autonomous merge, production deployment or human-signoff impersonation.
+- Retain [#81 workflow](https://github.com/anton415/finance-lab/issues/81): Project Status is the lifecycle source of truth, with **at most one** `needs:*` label per open issue. Mode labels do not alter status, next action, dispatch or human approval. Limit active learning WIP to one by default.
+- Implementer, Reviewer and Adversarial Reviewer roles/Go Budget and Security packs are **proposed** in [A1 #146](https://github.com/anton415/finance-lab/issues/146) and follow-ups; do not claim the pilots or automated gates are already deployed. Review exact SHA and accepted scope, keep adversarial/mutation testing opt-in and synthetic.
+- Each handoff identifies issue, mode, human-owned objective, role permissions, exact source/spec/design SHAs and digest as applicable, explicit authorization, observed checks and actual head SHA. A label alone is never an authorization. See the existing [specification contract](docs/agentops/specification-contract.md).
+- For cross-repository work, read that service repository's own `AGENTS.md` before dispatch. Until a service root policy is installed and its mode checked, do not silently rely on this frontend file as controlling external repository agents. The reviewed [service template](docs/engineering/service-AGENTS-template.md) is **not yet installed** in those repositories.
+
+## Historical agent rules carried forward
+
+Rules from [finance-lab-archive](https://github.com/anton415/finance-lab-archive/blob/main/AGENTS.md) supplement the existing protections: do not add new requirements/features/automation without explicit approval; fix review findings with the smallest in-scope change; documentation-only edits need honest review of text, links and examples; metrics must use independently verifiable evidence and represent missing values as `unknown`, not zero; GitHub account activity is not proof of a human action; never store conversation content in metrics. The archive's `~/.codex/AGENTS.md` reference is **local-only**, not authority available to remote agents. See [reconciliation](docs/engineering/legacy-instruction-reconciliation.md).
+
 ## Code review rules
 
 - Review each PR against its linked issue's scope and acceptance criteria.
