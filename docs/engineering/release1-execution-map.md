@@ -30,6 +30,7 @@ See [execution-modes.md](execution-modes.md) and [A1 current planning index](htt
 
 ## Supporting and deferred work
 
+- [Local stand learning drill #159](https://github.com/anton415/finance-lab/issues/159) is human-led `mode:learning`, planned after stable P1.2 and after the active Go learning task. It does not authorize fault injection, production repair or a second simultaneous learning WIP.
 - [Frontend #96 — manual calibration](https://github.com/anton415/finance-lab/issues/96) stays human-led `mode:learning`; the original descriptive `learning` label can remain.
 - [AgentOps #154 — synthetic Go Budget adversarial review pilot](https://github.com/anton415/finance-lab/issues/154) is **optional** learning/evaluation, not a Go Budget release prerequisite; proposed `mode:learning` does not authorize mutation or model dispatch.
 - [AgentOps #158 — Halfcycle evaluation](https://github.com/anton415/finance-lab/issues/158) is a deferred human-led comparison; no license/purchase or switch from Codex is authorized.
@@ -41,7 +42,7 @@ See [execution-modes.md](execution-modes.md) and [A1 current planning index](htt
 
 At drafting, the linked GitHub integration could **read** the `finance-lab-project` repositories but received `403 Resource not accessible by integration` when attempting to create branches or add execution labels there. Consequently, the org-side table entries above are **proposed**, not assertions that labels or `AGENTS.md` have been applied. They require separately granted organization write access and a follow-up human-approved change. The `web-bff` repository was empty at this snapshot; seed its own agent instructions with its first approved commit.
 
-Within `anton415/finance-lab`, labels and a governance PR can be created independently. Verify each label live; this map is not a substitute for GitHub issue metadata.
+In `anton415/finance-lab`, the labels **were applied** to frontend [#155](https://github.com/anton415/finance-lab/issues/155), [#156](https://github.com/anton415/finance-lab/issues/156), [#157](https://github.com/anton415/finance-lab/issues/157) as `mode:delivery`, and to [#96](https://github.com/anton415/finance-lab/issues/96), [#154](https://github.com/anton415/finance-lab/issues/154), [#158](https://github.com/anton415/finance-lab/issues/158) and the new [#159](https://github.com/anton415/finance-lab/issues/159) as `mode:learning`. Existing descriptive `learning` labels were retained. These updates did **not** authorize dispatch or change Project Status or `needs:*` labels. Reverify live issue labels before each future task.
 
 Before any agent dispatch across repositories:
 1. Ensure the target repository has committed, current `AGENTS.md` (copy the reviewed [service template](service-AGENTS-template.md) and adapt ownership).
