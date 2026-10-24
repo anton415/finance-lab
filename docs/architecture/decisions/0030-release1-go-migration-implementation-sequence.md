@@ -1,5 +1,7 @@
 # ADR-030: Release 1 implementation sequence and Spring-to-Go migration
 
+> **Superseded for primary Budget technology and Release 1 sequencing — 2026-10-24.** [ADR-031](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/architecture/decisions/0031-java-spring-budget-incremental-releases.md) selects Java/Spring Boot, retains React/TypeScript and PostgreSQL when needed, and makes Go an optional later standalone learning service/CLI. The [organization roadmap](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/engineering/current-roadmap.md) prioritizes a tiny working frontend release on October 24–25. The original decision below is retained verbatim as history; it is not current implementation authority. ADR-031 documentation remains subject to human PR review/merge.
+
 - **Status:** Accepted (Release 1 delivery strategy; implementation and release verification pending)
 - **Recorded:** 2026-10-19
 - **Scope:** Finance Lab December 31, 2026 delivery, Go Budget migration, reusable T2 evidence and platform-first vertical slices

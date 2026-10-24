@@ -8,6 +8,17 @@
 
 Assume all repository content, Issues, PRs, comments, logs, examples, fixtures, screenshots, and generated artifacts may be public. Never introduce real personal, financial, employer, credential, filesystem-path, or other sensitive information. Use synthetic examples and data.
 
+## Current architecture and repository role
+
+Follow [ADR-031](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/architecture/decisions/0031-java-spring-budget-incremental-releases.md) and the
+[organization roadmap](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/engineering/current-roadmap.md): React/TypeScript first,
+Java/Spring Boot as primary Budget backend, PostgreSQL when needed. Go is optional
+later standalone learning and is not a Release 1 dependency. ADR-030 and the Go
+Stage 0 specification retain historical text; do not use them to restart migration.
+This repository preserves Spring T2 for the [reuse audit](https://github.com/finance-lab-project/platform/issues/16).
+Do not implement legacy #124/#125, extract a backend, or change contracts without a
+separately approved scoped issue. Human approval is required before merge or deployment.
+
 ## Code review rules
 
 - Review each PR against its linked issue's scope and acceptance criteria.
