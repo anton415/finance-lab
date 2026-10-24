@@ -1,5 +1,7 @@
 # Go Budget — Stage 0 specification
 
+> **Historical Go migration specification — 2026-10-24.** [ADR-031](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/architecture/decisions/0031-java-spring-budget-incremental-releases.md) supersedes the Go production migration for Release 1. Preserve this specification and its pinned revision evidence for later optional Go learning/reference; it is not a prerequisite for the Java/Spring Budget backend or the frontend release. Existing Spring/V2 contracts remain unchanged.
+
 **Status: planning draft, revision 1, 2026-10-20.** This records
 [#142](https://github.com/anton415/finance-lab/issues/142), under
 [Go Budget — First authenticated monthly budget slice](https://github.com/anton415/finance-lab/milestone/11).

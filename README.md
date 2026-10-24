@@ -9,9 +9,23 @@ The project is at an early stage. Its initial technology direction is Vite, Reac
 
 All examples and financial data in this repository are synthetic.
 
+## Current organization direction
+
+The maintained frontend is [finance-lab-project/frontend](https://github.com/finance-lab-project/frontend).
+[ADR-031](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/architecture/decisions/0031-java-spring-budget-incremental-releases.md) selects **Java + Spring Boot** as the primary Budget backend,
+with **React + TypeScript** and **PostgreSQL when needed**. The [current roadmap](https://github.com/finance-lab-project/platform/blob/a783e14d3ee872245d717eb413f108b811d0209f/docs/engineering/current-roadmap.md)
+prioritizes a tiny functional frontend-only release on October 24–25, 2026.
+Go is optional later standalone service/CLI learning, outside Release 1.
+
+This repository retains the original Spring T2 source and architecture history.
+[Platform #16](https://github.com/finance-lab-project/platform/issues/16) audits Spring reuse and
+contracts before any separately approved implementation or repository move.
+Valid Spring PUT still returns 501; the scaffolding is not a working persistence backend.
+No existing code, storage or backup contract changes with this decision.
+
 The [Go Budget Stage 0 specification](docs/go-budget/stage-0-specification.md)
-records the proposed migration boundaries, API, persistence, testing and recovery
-plan. It is a planning draft; existing Spring and V2 contracts remain unchanged.
+records the historical migration boundaries, API, persistence, testing and recovery
+plan. Its Release 1 production direction is superseded by ADR-031; existing Spring and V2 contracts remain unchanged.
 Its [revision record](docs/go-budget/revision-1.md) pins the artifacts and evidence.
 
 The monthly planner has one income amount, fifteen fixed spending categories,
