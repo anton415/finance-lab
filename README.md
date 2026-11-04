@@ -1,3 +1,14 @@
+# Legacy repository — superseded
+
+This repository is retired from active Finance Lab development and retained as project history. The maintained Java/Vaadin rewrite lives in [finance-lab-project/app](https://github.com/finance-lab-project/app).
+
+- [Current architecture](https://github.com/finance-lab-project/app/blob/main/docs/architecture.md)
+- [Current delivery roadmap](https://github.com/finance-lab-project/app/blob/main/docs/roadmap.md)
+
+All stack choices, plans and operating instructions below describe the historical implementation. They do not define the current release or authorize continued deployment.
+
+---
+
 # finance-lab
 
 [![CI](https://github.com/anton415/finance-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/anton415/finance-lab/actions/workflows/ci.yml)
